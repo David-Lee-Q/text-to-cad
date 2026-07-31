@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 const ORIENTATION_FALLBACK = Object.freeze({
   x: [1, 0, 0],
   y: [0, 1, 0],
@@ -25,8 +27,18 @@ const DEFAULT_VIEW_PLANE_PALETTE = Object.freeze({
   }
 });
 
+const DEFAULT_VIEW_PLANE_SIZE = "6.71875rem";
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function normalizeCssLength(value, fallback = "") {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return `${value}px`;
+  }
+  const text = String(value || "").trim();
+  return text || fallback;
 }
 
 function toRgb(value) {
@@ -130,14 +142,19 @@ export default function ViewPlaneControl({
   meshData,
   viewPlaneOffsetRight,
   viewPlaneOffsetBottom = 16,
-  compact = false,
   activeViewPlaneFace,
   viewPlaneFaces,
   viewPlaneOrientation,
   viewerTheme,
+  compact = false,
+  variant = "3d",
+  viewPlaneSize,
+  viewPlaneHeader = null,
   activateViewPlaneFace,
   activateDefaultViewPlane
 }) {
+  const [hoveredNodeId, setHoveredNodeId] = useState("");
+
   if (!showViewPlane || previewMode || isLoading || !meshData) {
     return null;
   }
@@ -169,12 +186,25 @@ export default function ViewPlaneControl({
     .sort((left, right) => left.z - right.z);
   const backNodes = projectedNodes.filter((node) => node.z < 0);
   const frontNodes = projectedNodes.filter((node) => node.z >= 0);
-  const viewPlaneSizeClasses = compact ? "h-[5.65rem] w-[5.65rem]" : "h-[7.35rem] w-[7.35rem]";
+  const is2d = variant === "2d";
+  const customViewPlaneSize = !compact && !is2d
+    ? normalizeCssLength(viewPlaneSize, DEFAULT_VIEW_PLANE_SIZE)
+    : "";
+  const viewPlaneSizeClasses = compact || is2d ? "h-20 w-20" : "";
+  const viewPlaneSizeStyle = customViewPlaneSize
+    ? { width: customViewPlaneSize, height: customViewPlaneSize }
+    : undefined;
+  const viewPlaneSurfaceClasses = is2d
+    ? "cad-glass-surface pointer-events-auto relative rounded-md border border-sidebar-border text-sidebar-foreground shadow-sm transition duration-150"
+    : "pointer-events-auto relative text-sidebar-foreground transition duration-150";
+  const viewPlaneLabel = is2d ? "2D view selector" : "Perspective selector";
   const normalizedBottomOffset = typeof viewPlaneOffsetBottom === "number"
     ? `${viewPlaneOffsetBottom}px`
     : viewPlaneOffsetBottom;
+  const centerHovered = hoveredNodeId === "__default__";
   const renderNode = (node) => {
     const active = activeViewPlaneFace === node.id;
+    const hovered = hoveredNodeId === node.id;
     return (
       <g
         key={node.id}
@@ -182,9 +212,33 @@ export default function ViewPlaneControl({
         tabIndex={0}
         aria-label={node.title}
         aria-pressed={active}
-        className="cursor-pointer focus:outline-none"
+        className="group cursor-pointer focus:outline-none"
         onPointerDown={(event) => {
           event.stopPropagation();
+        }}
+        onPointerEnter={() => {
+          setHoveredNodeId(node.id);
+        }}
+        onPointerMove={() => {
+          setHoveredNodeId(node.id);
+        }}
+        onPointerLeave={() => {
+          setHoveredNodeId((current) => (current === node.id ? "" : current));
+        }}
+        onMouseEnter={() => {
+          setHoveredNodeId(node.id);
+        }}
+        onMouseMove={() => {
+          setHoveredNodeId(node.id);
+        }}
+        onMouseLeave={() => {
+          setHoveredNodeId((current) => (current === node.id ? "" : current));
+        }}
+        onFocus={() => {
+          setHoveredNodeId(node.id);
+        }}
+        onBlur={() => {
+          setHoveredNodeId((current) => (current === node.id ? "" : current));
         }}
         onClick={(event) => {
           event.stopPropagation();
@@ -202,6 +256,18 @@ export default function ViewPlaneControl({
         <circle
           cx={node.x}
           cy={node.y}
+          r={node.radius + 4.4}
+          className="transition-opacity duration-150"
+          opacity={hovered ? 1 : 0}
+          fill={node.fill}
+          fillOpacity="0.12"
+          stroke="var(--sidebar-foreground)"
+          strokeOpacity="0.72"
+          strokeWidth="1.1"
+        />
+        <circle
+          cx={node.x}
+          cy={node.y}
           r={node.radius + (active ? 2.1 : 0)}
           fill="none"
           stroke={active ? "var(--sidebar-foreground)" : "transparent"}
@@ -211,6 +277,12 @@ export default function ViewPlaneControl({
           cx={node.x}
           cy={node.y}
           r={node.radius}
+          className="transition-transform duration-150 ease-out"
+          style={{
+            transform: hovered ? "scale(1.1)" : "scale(1)",
+            transformBox: "fill-box",
+            transformOrigin: "center"
+          }}
           fill={node.fill}
           stroke={active ? "var(--sidebar-foreground)" : node.edge}
           strokeWidth={active ? 1.35 : 1}
@@ -221,20 +293,46 @@ export default function ViewPlaneControl({
 
   return (
     <div
-      className="pointer-events-none absolute z-20"
+      className="pointer-events-none absolute z-30 flex flex-col items-end gap-1"
       style={{ right: `${viewPlaneOffsetRight}px`, bottom: normalizedBottomOffset }}
     >
-      <div className={`cad-glass-surface pointer-events-auto relative rounded-full border border-sidebar-border text-sidebar-foreground shadow-sm transition duration-150 ${viewPlaneSizeClasses}`}>
-        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" aria-label="Perspective selector">
+      {viewPlaneHeader ? (
+        <div
+          className="pointer-events-auto"
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          {viewPlaneHeader}
+        </div>
+      ) : null}
+      <div
+        className={`${viewPlaneSurfaceClasses} ${viewPlaneSizeClasses}`}
+        style={viewPlaneSizeStyle}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+      >
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" aria-label={viewPlaneLabel}>
           <defs>
             <radialGradient id="view-sphere-shell" cx="34%" cy="28%" r="74%">
               <stop offset="0%" stopColor="var(--sidebar)" />
               <stop offset="100%" stopColor="var(--sidebar)" />
             </radialGradient>
           </defs>
-          <circle cx="50" cy="50" r="44" fill="url(#view-sphere-shell)" stroke="var(--sidebar-border)" strokeWidth="0.75" />
-          <ellipse cx="50" cy="50" rx="30" ry="11.8" fill="none" stroke="color-mix(in oklch, var(--sidebar-foreground) 12%, transparent)" strokeWidth="0.8" />
-          <ellipse cx="50" cy="50" rx="14" ry="30" fill="none" stroke="color-mix(in oklch, var(--sidebar-foreground) 12%, transparent)" strokeWidth="0.8" />
+          {is2d ? (
+            <>
+              <rect x="15" y="15" width="70" height="70" rx="8" fill="url(#view-sphere-shell)" stroke="var(--sidebar-border)" strokeWidth="0.75" />
+              <line x1="22" y1="50" x2="78" y2="50" fill="none" stroke="color-mix(in oklch, var(--sidebar-foreground) 18%, transparent)" strokeWidth="1" strokeLinecap="round" />
+              <line x1="50" y1="22" x2="50" y2="78" fill="none" stroke="color-mix(in oklch, var(--sidebar-foreground) 18%, transparent)" strokeWidth="1" strokeLinecap="round" />
+            </>
+          ) : (
+            <>
+              <circle cx="50" cy="50" r="44" fill="url(#view-sphere-shell)" stroke="var(--sidebar-border)" strokeWidth="0.75" />
+              <ellipse cx="50" cy="50" rx="30" ry="11.8" fill="none" stroke="color-mix(in oklch, var(--sidebar-foreground) 12%, transparent)" strokeWidth="0.8" />
+              <ellipse cx="50" cy="50" rx="14" ry="30" fill="none" stroke="color-mix(in oklch, var(--sidebar-foreground) 12%, transparent)" strokeWidth="0.8" />
+            </>
+          )}
           {backNodes.map((node) => (
             <line
               key={`${node.id}-stem`}
@@ -252,10 +350,34 @@ export default function ViewPlaneControl({
           <g
             role="button"
             tabIndex={0}
-            aria-label="Reset to default isometric view"
-            className="cursor-pointer focus:outline-none"
+            aria-label={is2d ? "Fit 2D view" : "Reset to default isometric view"}
+            className="group cursor-pointer focus:outline-none"
             onPointerDown={(event) => {
               event.stopPropagation();
+            }}
+            onPointerEnter={() => {
+              setHoveredNodeId("__default__");
+            }}
+            onPointerMove={() => {
+              setHoveredNodeId("__default__");
+            }}
+            onPointerLeave={() => {
+              setHoveredNodeId((current) => (current === "__default__" ? "" : current));
+            }}
+            onMouseEnter={() => {
+              setHoveredNodeId("__default__");
+            }}
+            onMouseMove={() => {
+              setHoveredNodeId("__default__");
+            }}
+            onMouseLeave={() => {
+              setHoveredNodeId((current) => (current === "__default__" ? "" : current));
+            }}
+            onFocus={() => {
+              setHoveredNodeId("__default__");
+            }}
+            onBlur={() => {
+              setHoveredNodeId((current) => (current === "__default__" ? "" : current));
             }}
             onClick={(event) => {
               event.stopPropagation();
@@ -274,7 +396,24 @@ export default function ViewPlaneControl({
             <circle
               cx="50"
               cy="50"
+              r="11.4"
+              className="transition-opacity duration-150"
+              opacity={centerHovered ? 1 : 0}
+              fill={rgbToCss(palette.center.fill, 0.16)}
+              stroke="var(--sidebar-foreground)"
+              strokeOpacity="0.72"
+              strokeWidth="1.1"
+            />
+            <circle
+              cx="50"
+              cy="50"
               r="7.3"
+              className="transition-transform duration-150 ease-out"
+              style={{
+                transform: centerHovered ? "scale(1.1)" : "scale(1)",
+                transformBox: "fill-box",
+                transformOrigin: "center"
+              }}
               fill={rgbToCss(palette.center.fill, 0.95)}
               stroke={rgbToCss(palette.center.stroke, 0.72)}
               strokeWidth="1.05"

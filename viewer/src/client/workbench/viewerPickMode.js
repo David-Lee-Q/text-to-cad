@@ -6,7 +6,9 @@ export function viewerPickModeForRenderPane({
   topologySelectionPending = false,
   topologySelectionUnavailable = false,
   topologySelectionDeferred = false,
+  topologyPickingActive = false,
   viewerMode = "",
+  assemblyPickingActive = false,
   focusedPartIds = ""
 } = {}) {
   if (topologySelectionPending || topologySelectionUnavailable || topologySelectionDeferred) {
@@ -15,7 +17,14 @@ export function viewerPickModeForRenderPane({
   if (dxfMode || pathPreviewMode) {
     return VIEWER_PICK_MODE.NONE;
   }
-  if (viewerMode === "assembly" && !String(focusedPartIds || "").trim()) {
+  if (
+    viewerMode === "assembly" &&
+    !topologyPickingActive &&
+    (
+      assemblyPickingActive ||
+      !String(focusedPartIds || "").trim()
+    )
+  ) {
     return VIEWER_PICK_MODE.ASSEMBLY;
   }
   return VIEWER_PICK_MODE.AUTO;

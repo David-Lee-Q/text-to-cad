@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { isEditableTarget } from "../../../ui/dom";
 import {
   isWebGlContextCreationError,
+  isSoftwareWebGlRenderer,
   runtimeErrorMessage
 } from "cadjs/lib/viewer/webglSupport";
 import {
@@ -10,6 +11,7 @@ import {
 import {
   resolveInteractionPixelRatioCap
 } from "cadjs/lib/viewer/renderQuality";
+import { updateOrbitControls } from "../orbitControls.js";
 
 function createWebGlRenderer(THREE) {
   return createCadWebGlRenderer(THREE, {
@@ -65,6 +67,8 @@ export function useViewerRuntime({
   defaultGridRadius,
   sceneScaleMode,
   floorMode,
+  onManualCameraInteraction,
+  onViewportResize,
   onContextLost,
   onContextRestored,
   onInitializationError,
@@ -123,18 +127,45 @@ export function useViewerRuntime({
 
       const scene = new THREE.Scene();
 
-      const camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 50000);
+      const syncCameraViewport = (targetCamera, nextWidth = width, nextHeight = height) => {
+        if (!targetCamera) {
+          return;
+        }
+        const aspect = Math.max(nextWidth, 1) / Math.max(nextHeight, 1);
+        if (targetCamera.isPerspectiveCamera) {
+          targetCamera.aspect = aspect;
+        } else if (targetCamera.isOrthographicCamera) {
+          const halfHeight = Math.max(Number(targetCamera.userData?.cadHalfHeight) || 120, 1e-3);
+          targetCamera.left = -halfHeight * aspect;
+          targetCamera.right = halfHeight * aspect;
+          targetCamera.top = halfHeight;
+          targetCamera.bottom = -halfHeight;
+        }
+        targetCamera.updateProjectionMatrix?.();
+      };
+
+      const perspectiveCamera = new THREE.PerspectiveCamera(48, width / height, 0.1, 50000);
+      const orthographicCamera = new THREE.OrthographicCamera(-120, 120, 120, -120, 0.1, 50000);
+      orthographicCamera.userData.cadHalfHeight = 120;
+      const camera = perspectiveCamera;
       camera.up.set(0, 0, 1);
       camera.position.set(180, -180, 120);
+      orthographicCamera.up.copy(camera.up);
+      orthographicCamera.position.copy(camera.position);
+      syncCameraViewport(perspectiveCamera, width, height);
+      syncCameraViewport(orthographicCamera, width, height);
 
       const renderer = createWebGlRenderer(THREE);
+      const softwareRendering = isSoftwareWebGlRenderer(renderer);
+      const idlePixelRatioCap = softwareRendering ? 1 : IDLE_PIXEL_RATIO_CAP;
+      const interactionPixelRatioCap = softwareRendering ? 1 : INTERACTION_PIXEL_RATIO_CAP;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = getViewerThemeValue(viewerTheme, "toneMappingExposure", DEFAULT_LIGHTING.toneMappingExposure);
       renderer.localClippingEnabled = true;
-      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.enabled = !softwareRendering;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      renderer.setPixelRatio(getPixelRatioCap(IDLE_PIXEL_RATIO_CAP));
+      renderer.setPixelRatio(getPixelRatioCap(idlePixelRatioCap));
       renderer.setSize(width, height);
       container.innerHTML = "";
       container.appendChild(renderer.domElement);
@@ -162,7 +193,7 @@ export function useViewerRuntime({
         getViewerThemeValue(viewerTheme, "keyLightIntensity", DEFAULT_LIGHTING.keyLightIntensity)
       );
       keyLight.position.set(240, -150, 340);
-      keyLight.castShadow = true;
+      keyLight.castShadow = !softwareRendering;
       keyLight.shadow.mapSize.set(2048, 2048);
       keyLight.shadow.bias = -0.00025;
       keyLight.shadow.normalBias = 0.024;
@@ -212,9 +243,11 @@ export function useViewerRuntime({
       const pointer = new THREE.Vector2();
       const interactionState = {
         active: false,
-        pixelRatioCap: IDLE_PIXEL_RATIO_CAP,
-        pixelRatio: getPixelRatioCap(IDLE_PIXEL_RATIO_CAP),
+        pixelRatioCap: idlePixelRatioCap,
+        pixelRatio: getPixelRatioCap(idlePixelRatioCap),
         renderQueued: false,
+        renderQueuedAt: 0,
+        renderFallbackTimerId: 0,
         restoreTimerId: 0
       };
       const keyboardOrbitState = {
@@ -288,10 +321,35 @@ export function useViewerRuntime({
       let rafId = 0;
       const requestRender = () => {
         if (interactionState.renderQueued) {
-          return;
+          const now = typeof performance !== "undefined" && typeof performance.now === "function"
+            ? performance.now()
+            : Date.now();
+          if (interactionState.renderQueuedAt && now - interactionState.renderQueuedAt < 120) {
+            return;
+          }
+          window.cancelAnimationFrame(rafId);
+          interactionState.renderQueued = false;
+          interactionState.renderQueuedAt = 0;
         }
         interactionState.renderQueued = true;
+        interactionState.renderQueuedAt = typeof performance !== "undefined" && typeof performance.now === "function"
+          ? performance.now()
+          : Date.now();
         rafId = window.requestAnimationFrame(renderFrame);
+        if (interactionState.renderFallbackTimerId) {
+          window.clearTimeout(interactionState.renderFallbackTimerId);
+        }
+        interactionState.renderFallbackTimerId = window.setTimeout(() => {
+          if (!interactionState.renderQueued) {
+            return;
+          }
+          window.cancelAnimationFrame(rafId);
+          renderFrame(
+            typeof performance !== "undefined" && typeof performance.now === "function"
+              ? performance.now()
+              : Date.now()
+          );
+        }, 120);
         if (runtimeRef.current) {
           runtimeRef.current.rafId = rafId;
         }
@@ -299,20 +357,27 @@ export function useViewerRuntime({
 
       function renderFrame(timestamp) {
         interactionState.renderQueued = false;
+        interactionState.renderQueuedAt = 0;
+        if (interactionState.renderFallbackTimerId) {
+          window.clearTimeout(interactionState.renderFallbackTimerId);
+          interactionState.renderFallbackTimerId = 0;
+        }
         const cameraTransitionActive = stepCameraTransition(runtimeRef.current, timestamp);
         const keyboardOrbitMoved = stepKeyboardOrbit(runtimeRef.current, timestamp);
-        const needsMoreFrames = controls.update();
+        const needsMoreFrames = updateOrbitControls(controls, timestamp, runtimeRef.current);
         if (cameraTransitionActive || keyboardOrbitMoved) {
           emitPerspectiveChange(runtimeRef.current);
         }
+        renderer.render(scene, runtimeRef.current?.camera || camera);
         const previewOrbitActive = !!runtimeRef.current?.previewOrbitEnabled;
-        renderer.render(scene, camera);
-        const nextActiveFace = getActiveViewPlaneFaceId(runtimeRef.current);
-        if (nextActiveFace !== activeViewPlaneFaceRef.current) {
-          activeViewPlaneFaceRef.current = nextActiveFace;
-          setActiveViewPlaneFace(nextActiveFace);
+        if (!previewOrbitActive) {
+          const nextActiveFace = getActiveViewPlaneFaceId(runtimeRef.current);
+          if (nextActiveFace !== activeViewPlaneFaceRef.current) {
+            activeViewPlaneFaceRef.current = nextActiveFace;
+            setActiveViewPlaneFace(nextActiveFace);
+          }
+          syncViewPlaneOrientation(runtimeRef.current);
         }
-        syncViewPlaneOrientation(runtimeRef.current);
         if (
           cameraTransitionActive ||
           keyboardOrbitMoved ||
@@ -331,8 +396,8 @@ export function useViewerRuntime({
         }
         interactionState.active = true;
         applyRenderQuality(resolveInteractionPixelRatioCap({
-          idlePixelRatioCap: IDLE_PIXEL_RATIO_CAP,
-          interactionPixelRatioCap: INTERACTION_PIXEL_RATIO_CAP,
+          idlePixelRatioCap,
+          interactionPixelRatioCap,
           preservePixelRatio: runtimeRef.current?.preserveInteractionPixelRatio === true,
           screenSpaceLineMaterialCount: getScreenSpaceLineMaterialCount()
         }));
@@ -349,7 +414,7 @@ export function useViewerRuntime({
           controls.enableDamping = true;
           controls.dampingFactor = DEFAULT_DAMPING_FACTOR;
           controls.zoomSpeed = getDefaultZoomSpeed();
-          applyRenderQuality(IDLE_PIXEL_RATIO_CAP);
+          applyRenderQuality(idlePixelRatioCap);
           requestRender();
         }, INTERACTION_IDLE_DELAY_MS);
       };
@@ -359,12 +424,13 @@ export function useViewerRuntime({
         const h = container.clientHeight || 640;
         applyRenderQuality(interactionState.pixelRatioCap);
         renderer.setSize(w, h);
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
+        syncCameraViewport(perspectiveCamera, w, h);
+        syncCameraViewport(orthographicCamera, w, h);
         applyCameraFrameInsets?.(runtimeRef.current, frameInsetsRef?.current, { updateProjection: false });
         syncScreenSpaceLineMaterials();
         syncDrawingCanvasSize(runtimeRef.current);
         renderDrawingOverlay();
+        runtimeRef.current?.onViewportResize?.();
         requestRender();
       };
       window.addEventListener("resize", onResize);
@@ -375,7 +441,16 @@ export function useViewerRuntime({
         : null;
       resizeObserver?.observe(container);
 
+      let controlsStartDistance = null;
+      const readControlsDistance = () => {
+        const activeRuntime = runtimeRef.current;
+        if (!activeRuntime?.camera || !activeRuntime?.controls?.target) {
+          return null;
+        }
+        return activeRuntime.camera.position.distanceTo(activeRuntime.controls.target);
+      };
       const handleControlsStart = () => {
+        controlsStartDistance = readControlsDistance();
         cancelCameraTransition(runtimeRef.current);
         beginInteraction();
       };
@@ -384,9 +459,18 @@ export function useViewerRuntime({
         requestRender();
       };
       const handleControlsEnd = () => {
+        const controlsEndDistance = readControlsDistance();
+        if (Number.isFinite(controlsStartDistance) && Number.isFinite(controlsEndDistance)) {
+          const threshold = Math.max(Math.abs(controlsStartDistance) * 0.002, 1e-4);
+          if (Math.abs(controlsEndDistance - controlsStartDistance) > threshold) {
+            runtimeRef.current?.onManualCameraInteraction?.("zoom");
+          }
+        }
+        controlsStartDistance = null;
         scheduleIdleQuality();
       };
       const handleWheel = (event) => {
+        runtimeRef.current?.onManualCameraInteraction?.("wheel");
         cancelCameraTransition(runtimeRef.current);
         controls.enableDamping = false;
         controls.zoomSpeed = getWheelZoomSpeed(isTrackpadLikeWheelEvent(event)
@@ -478,7 +562,12 @@ export function useViewerRuntime({
         THREE,
         scene,
         camera,
+        perspectiveCamera,
+        orthographicCamera,
+        projection: "perspective",
+        syncCameraViewport,
         renderer,
+        softwareRendering,
         Line2,
         LineGeometry,
         LineSegments2,
@@ -521,6 +610,7 @@ export function useViewerRuntime({
         vertexPickThreshold: 0.9,
         cameraTransition: null,
         previewOrbitEnabled: false,
+        orbitControlsLastTimestamp: 0,
         preserveInteractionPixelRatio: preserveInteractionPixelRatio === true,
         interactionState,
         keyboardOrbitState,
@@ -532,6 +622,8 @@ export function useViewerRuntime({
         scheduleIdleQuality,
         applyCameraFrameInsets,
         frameInsetsRef,
+        onManualCameraInteraction,
+        onViewportResize,
         registerScreenSpaceLineMaterial,
         unregisterScreenSpaceLineMaterial
       };
@@ -555,6 +647,9 @@ export function useViewerRuntime({
         }
         if (runtime.interactionState.restoreTimerId) {
           window.clearTimeout(runtime.interactionState.restoreTimerId);
+        }
+        if (runtime.interactionState.renderFallbackTimerId) {
+          window.clearTimeout(runtime.interactionState.renderFallbackTimerId);
         }
         cancelCameraTransition(runtime, { scheduleIdle: false });
         window.cancelAnimationFrame(runtime.rafId);

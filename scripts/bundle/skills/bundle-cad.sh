@@ -7,6 +7,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 MODE="write"
 CLEAN=0
 INSTALL_DEPS=1
+PRINT_OUTPUTS=0
 
 ESBUILD_VERSION="${CAD_SNAPSHOT_ESBUILD_VERSION:-0.27.7}"
 THREE_VERSION="${CAD_SNAPSHOT_THREE_VERSION:-0.160.0}"
@@ -14,7 +15,7 @@ GIFENC_VERSION="${CAD_SNAPSHOT_GIFENC_VERSION:-1.0.3}"
 
 BUILD_DEPS_DIR="${CAD_SNAPSHOT_BUILD_DEPS_DIR:-$REPO_ROOT/tmp/cad-snapshot-build}"
 CHECK_DIR="${CAD_SNAPSHOT_CHECK_DIR:-$REPO_ROOT/tmp/cad-snapshot-runtime-check}"
-RUNTIME_DIR="$REPO_ROOT/skills/cad/scripts/cadpy_snapshot/runtime"
+RUNTIME_DIR="$REPO_ROOT/skills/cad/scripts/snapshot/runtime"
 ENTRYPOINT="$REPO_ROOT/packages/cadjs/src/common/headlessRenderEntry.js"
 CADPY_PACKAGE_DIR="$REPO_ROOT/packages/cadpy"
 CADPY_RUNTIME_DIR="$REPO_ROOT/skills/cad/scripts/packages/cadpy"
@@ -24,13 +25,15 @@ usage() {
 Usage:
   scripts/bundle/bundle-skill.sh cad [--check] [--clean] [--no-install]
 
-Bundles the self-contained browser runtime used by skills/cad/scripts/cadpy_snapshot
+Bundles the self-contained browser runtime used by skills/cad/scripts/snapshot
 and the bundled Python package runtime used by skills/cad/scripts.
 
 Options:
   --check       Bundle into tmp/ and fail if snapshot/runtime is stale.
   --clean       Remove the temporary dependency/build directories first.
   --no-install  Require existing build dependencies in tmp/cad-snapshot-build.
+  --print-outputs
+                Print the repo-relative generated output paths, then exit.
   -h, --help    Show this help.
 EOF
 }
@@ -46,6 +49,9 @@ while [ "$#" -gt 0 ]; do
     --no-install)
       INSTALL_DEPS=0
       ;;
+    --print-outputs)
+      PRINT_OUTPUTS=1
+      ;;
     -h|--help)
       usage
       exit 0
@@ -58,6 +64,13 @@ while [ "$#" -gt 0 ]; do
   esac
   shift
 done
+
+if [ "$PRINT_OUTPUTS" -eq 1 ]; then
+  printf '%s\n' \
+    "${RUNTIME_DIR#"$REPO_ROOT"/}" \
+    "${CADPY_RUNTIME_DIR#"$REPO_ROOT"/}"
+  exit 0
+fi
 
 if [ ! -f "$ENTRYPOINT" ]; then
   echo "Missing snapshot render entrypoint: $ENTRYPOINT" >&2
@@ -189,12 +202,12 @@ check_runtime() {
   local stale=0
   for file in render.html snapshot-render.js; do
     if [ ! -f "$RUNTIME_DIR/$file" ]; then
-      echo "Missing generated runtime file: skills/cad/scripts/cadpy_snapshot/runtime/$file" >&2
+      echo "Missing generated runtime file: skills/cad/scripts/snapshot/runtime/$file" >&2
       stale=1
       continue
     fi
     if ! cmp -s "$CHECK_DIR/$file" "$RUNTIME_DIR/$file"; then
-      echo "Stale generated runtime file: skills/cad/scripts/cadpy_snapshot/runtime/$file" >&2
+      echo "Stale generated runtime file: skills/cad/scripts/snapshot/runtime/$file" >&2
       stale=1
     fi
   done
@@ -244,6 +257,6 @@ if [ "$MODE" = "check" ]; then
 else
   build_runtime "$RUNTIME_DIR"
   sync_cadpy_runtime "$CADPY_RUNTIME_DIR"
-  echo "Bundled skills/cad/scripts/cadpy_snapshot/runtime"
+  echo "Bundled skills/cad/scripts/snapshot/runtime"
   echo "Bundled skills/cad/scripts/packages/cadpy"
 fi

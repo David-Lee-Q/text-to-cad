@@ -51,6 +51,7 @@ const viewerAllowedHosts = normalizeViewerAllowedHosts(process.env.VIEWER_ALLOWE
 const viewerServerLifetimeMs = normalizeServerLifetimeMs(process.env.VIEWER_SERVER_LIFETIME_MS);
 assertNoDeprecatedLocalRootEnv(process.env);
 const viewerVersion = readViewerPackageVersion(viewerAppRoot);
+const viewerServerMode = String(process.env.VIEWER_AGENT_START_MODE || "dev").trim() || "dev";
 const viewerGit = String(process.env.VIEWER_GIT || "").trim();
 const localServerFeatures = [
   "dynamic-root",
@@ -100,12 +101,19 @@ function findRootPackageSrc(packageDirName) {
 }
 
 function resolveCadJsPackageRoot() {
+  const bundledPackageSrc = path.join(viewerAppRoot, "packages", "cadjs", "src");
+  if (fs.existsSync(bundledPackageSrc)) {
+    return bundledPackageSrc;
+  }
+  const rootPackageSrc = findRootPackageSrc("cadjs");
+  if (rootPackageSrc) {
+    return rootPackageSrc;
+  }
   const installedPackageSrc = path.join(viewerAppRoot, "node_modules", "cadjs", "src");
   if (fs.existsSync(installedPackageSrc)) {
     return installedPackageSrc;
   }
-  const rootPackageSrc = findRootPackageSrc("cadjs");
-  return rootPackageSrc || path.resolve(viewerAppRoot, "../packages/cadjs/src");
+  return path.resolve(viewerAppRoot, "../packages/cadjs/src");
 }
 
 function resolveDirectoryRoot() {
@@ -266,6 +274,7 @@ function cadCatalogPlugin({ enableStepArtifactBackend = false } = {}) {
           dynamicRoot: true,
           stepArtifactGenerationAvailable: enableStepArtifactBackend,
           viewerVersion,
+          serverMode: viewerServerMode,
           git: viewerGit,
           serverFeatures: localServerFeatures,
           activeDirectories: activeDirectoryOptions({ rootDir: infoRootDir }),

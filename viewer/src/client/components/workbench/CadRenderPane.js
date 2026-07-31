@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "../ui/dropdown-menu";
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import AssemblyContextMenuItems from "./AssemblyContextMenuItems";
 import { cn } from "@/ui/utils";
 import { RENDER_FORMAT } from "@/workbench/constants";
@@ -19,6 +20,10 @@ import {
   isMeshRenderFormat,
   isRobotRenderFormat
 } from "cadjs/lib/fileFormats";
+import {
+  CAMERA_PROJECTION,
+  normalizeCameraProjection
+} from "cadjs/lib/displaySettings";
 import { VIEWER_SCENE_SCALE } from "cadjs/lib/viewer/sceneScale";
 import { VIEWER_PICK_MODE } from "cadjs/lib/viewer/constants";
 import { useStepAnimationSnapshot } from "@/workbench/stepAnimationStore";
@@ -77,6 +82,52 @@ function viewerContextMenuAnchorStyle(menu, viewportFrameInsets) {
   };
 }
 
+function DxfViewModeControl({
+  value,
+  threeDimensionalAvailable = false,
+  onChange
+}) {
+  const normalizedValue = value === "3d" && threeDimensionalAvailable ? "3d" : "2d";
+
+  return (
+    <div className="cad-glass-surface rounded-md border border-sidebar-border p-0.5 shadow-sm">
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        size="sm"
+        value={normalizedValue}
+        onValueChange={(nextValue) => {
+          if (!nextValue) {
+            return;
+          }
+          if (nextValue === "3d" && !threeDimensionalAvailable) {
+            return;
+          }
+          onChange?.(nextValue);
+        }}
+        className="grid h-7 w-[5.5rem] grid-cols-2"
+        aria-label="DXF view mode"
+      >
+        <ToggleGroupItem
+          value="2d"
+          className="!h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground data-[state=on]:!bg-accent data-[state=on]:!text-foreground data-[state=on]:font-semibold"
+          title="Show DXF flat pattern"
+        >
+          2D
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="3d"
+          disabled={!threeDimensionalAvailable}
+          className="!h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground data-[state=on]:!bg-accent data-[state=on]:!text-foreground data-[state=on]:font-semibold"
+          title={threeDimensionalAvailable ? "Show DXF bend preview" : "3D bend preview unavailable"}
+        >
+          3D
+        </ToggleGroupItem>
+      </ToggleGroup>
+    </div>
+  );
+}
+
 function ViewerContextMenu({
   menu,
   positionStyle,
@@ -89,6 +140,8 @@ function ViewerContextMenu({
   onHideAll,
   onHide,
   onReveal,
+  onResetZoom,
+  onZoomToFit,
   onExpandSelected,
   onCollapseSelected,
   onExpandAll,
@@ -135,44 +188,100 @@ function ViewerContextMenu({
           event.stopPropagation();
         }}
       >
-        <AssemblyContextMenuItems
-          Item={DropdownMenuItem}
-          Separator={DropdownMenuSeparator}
-          itemClassName={itemClassName}
-          selected={selected}
-          isolated={focused}
-          hidden={hidden}
-          actionCount={menu.actionCount}
-          copyReferenceDisabled={!String(menu.copyText || "").trim()}
-          selectDisabled={menu.selectDisabled === true}
-          showIsolate={menu.showIsolate !== false}
-          isolateDisabled={menu.isolateDisabled === true}
-          showExitAllIsolate={menu.showExitAllIsolate === true}
-          exitAllIsolateDisabled={menu.exitAllIsolateDisabled === true}
-          showHideOther={menu.showHideOther !== false}
-          hideOtherDisabled={menu.hideOtherDisabled === true}
-          showVisibility={menu.showVisibility !== false}
-          showHideAll={menu.showHideAll === true}
-          hideAllDisabled={menu.hideAllDisabled === true}
-          hideAllLabel={String(menu.hideAllLabel || "").trim() || (hidden ? "Reveal all instances" : "Hide all instances")}
-          visibilityDisabled={menu.visibilityDisabled === true}
-          showExpandCollapse={menu.showExpandCollapse === true}
-          expandSelectedDisabled={menu.expandSelectedDisabled !== false}
-          collapseSelectedDisabled={menu.collapseSelectedDisabled !== false}
-          expandAllDisabled={menu.expandAllDisabled !== false}
-          collapseAllDisabled={menu.collapseAllDisabled !== false}
-          onCopyReference={() => handleAction(onCopyReference)}
-          onSelect={() => handleAction(onSelect)}
-          onIsolate={() => handleAction(onFocus)}
-          onExitAllIsolate={() => handleAction(onExitAllIsolate)}
-          onHideOther={() => handleAction(onHideOther)}
-          onHideAll={() => handleAction(onHideAll)}
-          onToggleVisibility={() => handleAction(hidden ? onReveal : onHide)}
-          onExpandSelected={() => handleAction(onExpandSelected)}
-          onCollapseSelected={() => handleAction(onCollapseSelected)}
-          onExpandAll={() => handleAction(onExpandAll)}
-          onCollapseAll={() => handleAction(onCollapseAll)}
-        />
+        {menu.global === true ? (
+          <>
+            {menu.showShowAll === true ? (
+              <DropdownMenuItem
+                className={itemClassName}
+                onSelect={() => handleAction(onHideAll)}
+              >
+                Show all
+              </DropdownMenuItem>
+            ) : null}
+            {menu.showShowAll === true && menu.showCameraActions !== false ? (
+              <DropdownMenuSeparator />
+            ) : null}
+            {menu.showCameraActions !== false ? (
+              <>
+                <DropdownMenuItem
+                  className={itemClassName}
+                  disabled={menu.resetZoomDisabled === true}
+                  onSelect={() => handleAction(onResetZoom)}
+                >
+                  Reset Zoom
+                </DropdownMenuItem>
+              </>
+            ) : null}
+            {menu.showCameraActions !== false && menu.showExpandCollapse === true ? (
+              <DropdownMenuSeparator />
+            ) : null}
+            {menu.showShowAll === true && menu.showCameraActions === false && menu.showExpandCollapse === true ? (
+              <DropdownMenuSeparator />
+            ) : null}
+            {menu.showExpandCollapse === true ? (
+              <>
+                <DropdownMenuItem
+                  className={itemClassName}
+                  disabled={menu.expandAllDisabled === true}
+                  onSelect={() => handleAction(onExpandAll)}
+                >
+                  Expand all
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={itemClassName}
+                  disabled={menu.collapseAllDisabled === true}
+                  onSelect={() => handleAction(onCollapseAll)}
+                >
+                  Collapse all
+                </DropdownMenuItem>
+              </>
+            ) : null}
+          </>
+        ) : (
+          <AssemblyContextMenuItems
+            Item={DropdownMenuItem}
+            Separator={DropdownMenuSeparator}
+            itemClassName={itemClassName}
+            selected={selected}
+            isolated={focused}
+            hidden={hidden}
+            actionCount={menu.actionCount}
+            copyReferenceDisabled={!String(menu.copyText || "").trim()}
+            selectDisabled={menu.selectDisabled === true}
+            showIsolate={menu.showIsolate !== false}
+            isolateDisabled={menu.isolateDisabled === true}
+            showExitAllIsolate={menu.showExitAllIsolate === true}
+            exitAllIsolateDisabled={menu.exitAllIsolateDisabled === true}
+            showHideOther={menu.showHideOther !== false}
+            hideOtherDisabled={menu.hideOtherDisabled === true}
+            showVisibility={menu.showVisibility !== false}
+            showHideAll={menu.showHideAll === true}
+            hideAllDisabled={menu.hideAllDisabled === true}
+            hideAllLabel={String(menu.hideAllLabel || "").trim() || "Show all"}
+            visibilityDisabled={menu.visibilityDisabled === true}
+            showCameraActions={menu.showCameraActions !== false}
+            resetZoomDisabled={menu.resetZoomDisabled === true}
+            zoomToFitDisabled={menu.zoomToFitDisabled === true}
+            showExpandCollapse={menu.showExpandCollapse === true}
+            expandSelectedDisabled={menu.expandSelectedDisabled !== false}
+            collapseSelectedDisabled={menu.collapseSelectedDisabled !== false}
+            expandAllDisabled={menu.expandAllDisabled !== false}
+            collapseAllDisabled={menu.collapseAllDisabled !== false}
+            onCopyReference={() => handleAction(onCopyReference)}
+            onSelect={() => handleAction(onSelect)}
+            onIsolate={() => handleAction(onFocus)}
+            onExitAllIsolate={() => handleAction(onExitAllIsolate)}
+            onHideOther={() => handleAction(onHideOther)}
+            onHideAll={() => handleAction(onHideAll)}
+            onToggleVisibility={() => handleAction(hidden ? onReveal : onHide)}
+            onResetZoom={() => handleAction(onResetZoom)}
+            onZoomToFit={() => handleAction(onZoomToFit)}
+            onExpandSelected={() => handleAction(onExpandSelected)}
+            onCollapseSelected={() => handleAction(onCollapseSelected)}
+            onExpandAll={() => handleAction(onExpandAll)}
+            onCollapseAll={() => handleAction(onCollapseAll)}
+          />
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -185,6 +294,8 @@ export default function CadRenderPane({
   selectedMeshData,
   selectedDxfData,
   selectedDxfMeshData,
+  dxfViewMode = "2d",
+  onDxfViewModeChange,
   selectedImplicitModel,
   implicitDynamicRenderActive = false,
   implicitGraphicsSettings = null,
@@ -204,6 +315,7 @@ export default function CadRenderPane({
   referenceSelectionDeferred = false,
   viewPlaneOffsetRight = 16,
   viewerMode,
+  assemblyPickingActive = false,
   assemblyParts,
   hiddenPartIds,
   selectedPartIds,
@@ -221,6 +333,9 @@ export default function CadRenderPane({
   pickableVertices,
   focusedPartIds = "",
   displaySettings = null,
+  onProjectionChange,
+  onDisplayModeChange,
+  boundsAnimationActive = false,
   drawToolActive,
   drawingTool,
   drawingStrokes,
@@ -240,6 +355,8 @@ export default function CadRenderPane({
   onViewerContextMenuHideAll,
   onViewerContextMenuHide,
   onViewerContextMenuReveal,
+  onViewerContextMenuResetZoom,
+  onViewerContextMenuZoomToFit,
   onViewerContextMenuExpandSelected,
   onViewerContextMenuCollapseSelected,
   onViewerContextMenuExpandAll,
@@ -277,9 +394,17 @@ export default function CadRenderPane({
   const implicitMode = renderFormat === RENDER_FORMAT.IMPLICIT;
   const meshOnlyMode = isMeshRenderFormat(renderFormat);
   const pathPreviewMode = meshOnlyMode || gcodeMode;
-  const dxfMeshPreviewReady = dxfMode && !!selectedDxfMeshData;
+  const dxf3dAvailable = !!selectedDxfMeshData;
+  const activeDxfViewMode = dxfViewMode === "3d" && dxf3dAvailable ? "3d" : "2d";
+  const dxfMeshPreviewReady = dxfMode && activeDxfViewMode === "3d" && dxf3dAvailable;
   const activeMeshData = dxfMeshPreviewReady ? selectedDxfMeshData : selectedMeshData;
+  const stepDisplaySettingsActive = renderFormat === RENDER_FORMAT.STEP && !!displaySettings && !dxfMode && !pathPreviewMode;
+  const cadProjection = stepDisplaySettingsActive
+    ? normalizeCameraProjection(displaySettings.projection)
+    : CAMERA_PROJECTION.PERSPECTIVE;
   const activeModelKey = dxfMeshPreviewReady ? (selectedDxfKey || selectedKey) : selectedKey;
+  const stepBoundsAnimationActive = Boolean(resolvedStepParameters?.animationState?.playing);
+  const cadViewerBoundsAnimationActive = Boolean(boundsAnimationActive || stepBoundsAnimationActive);
   const missingFileLabel = String(missingFileRef || "").trim();
   const topologySelectionPending = Boolean(referenceSelectionPending && !dxfMode && !urdfMode && !pathPreviewMode);
   const topologySelectionUnavailable = Boolean(referenceSelectionUnavailable && !dxfMode && !urdfMode && !pathPreviewMode);
@@ -292,9 +417,16 @@ export default function CadRenderPane({
   };
   const ctaMode = !dxfMode && !pathPreviewMode && drawToolActive
     ? "screenshot"
-    : selectionCount > 0
+    : !dxfMode && !pathPreviewMode && selectionCount > 0
       ? "selection"
       : "";
+  const dxfViewPlaneHeader = dxfMode ? (
+    <DxfViewModeControl
+      value={activeDxfViewMode}
+      threeDimensionalAvailable={dxf3dAvailable}
+      onChange={onDxfViewModeChange}
+    />
+  ) : null;
   const bottomOverlayStyle = {
     bottom: "1rem"
   };
@@ -383,6 +515,10 @@ export default function CadRenderPane({
           ref={viewerRef}
           dxfData={selectedDxfData}
           modelKey={selectedDxfKey}
+          themeSettings={themeSettings}
+          viewPlaneOffsetRight={viewPlaneOffsetRight}
+          viewPlaneOffsetBottom="1rem"
+          viewPlaneHeader={dxfViewPlaneHeader}
           onViewerAlertChange={handleViewerAlertChange}
         />
       ) : (
@@ -392,16 +528,20 @@ export default function CadRenderPane({
           modelKey={activeModelKey}
           renderFormat={renderFormat}
           perspective={viewerPerspective}
+          projection={cadProjection}
           perspectiveRef={viewerPerspectiveRef}
+          onProjectionChange={stepDisplaySettingsActive ? onProjectionChange : undefined}
+          onDisplayModeChange={stepDisplaySettingsActive ? onDisplayModeChange : undefined}
           showEdges={!gcodeMode}
           recomputeNormals={false}
           themeSettings={themeSettings}
-          displaySettings={dxfMode || pathPreviewMode ? null : displaySettings}
+          displaySettings={stepDisplaySettingsActive ? displaySettings : null}
           previewMode={dxfMode ? false : previewMode}
           showViewPlane={dxfMode || gcodeMode ? true : !previewMode}
           scale={urdfMode ? VIEWER_SCENE_SCALE.URDF : VIEWER_SCENE_SCALE.CAD}
           viewPlaneOffsetRight={viewPlaneOffsetRight}
           viewPlaneOffsetBottom="1rem"
+          viewPlaneHeader={dxfViewPlaneHeader}
           compactViewPlane={false}
           viewportFrameInsets={viewportFrameInsets}
           isLoading={viewerLoading}
@@ -413,7 +553,13 @@ export default function CadRenderPane({
               topologySelectionPending,
               topologySelectionUnavailable,
               topologySelectionDeferred,
+              topologyPickingActive: Boolean(
+                pickableFaces?.length ||
+                pickableEdges?.length ||
+                pickableVertices?.length
+              ),
               viewerMode,
+              assemblyPickingActive,
               focusedPartIds
             })}
           renderPartsIndividually={urdfMode ? true : (renderPartsIndividually || Boolean(resolvedStepParameters?.definition))}
@@ -433,6 +579,7 @@ export default function CadRenderPane({
           pickableEdges={dxfMode || pathPreviewMode ? [] : pickableEdges}
           pickableVertices={dxfMode || pathPreviewMode ? [] : pickableVertices}
           focusedPartId={dxfMode || pathPreviewMode ? "" : focusedPartIds}
+          boundsAnimationActive={cadViewerBoundsAnimationActive}
           drawingEnabled={!dxfMode && !pathPreviewMode && drawToolActive}
           drawingTool={drawingTool}
           drawingStrokes={dxfMode || pathPreviewMode ? [] : drawingStrokes}
@@ -460,6 +607,8 @@ export default function CadRenderPane({
           onHideAll={onViewerContextMenuHideAll}
           onHide={onViewerContextMenuHide}
           onReveal={onViewerContextMenuReveal}
+          onResetZoom={onViewerContextMenuResetZoom}
+          onZoomToFit={onViewerContextMenuZoomToFit}
           onExpandSelected={onViewerContextMenuExpandSelected}
           onCollapseSelected={onViewerContextMenuCollapseSelected}
           onExpandAll={onViewerContextMenuExpandAll}

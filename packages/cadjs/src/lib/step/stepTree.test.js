@@ -430,6 +430,7 @@ test("STEP tree can assign topology references to assembly parts by occurrence i
       {
         id: "servo-part",
         occurrenceId: "o1.3.2",
+        sourceOccurrenceId: "o1.4",
         nodeType: "part",
         displayName: "servo",
         children: []
@@ -508,6 +509,66 @@ test("STEP tree can assign topology references to assembly parts by occurrence i
   );
 });
 
+test("STEP tree topology rows can be limited to loaded parts", () => {
+  const root = {
+    id: "root",
+    occurrenceId: "o1",
+    nodeType: "assembly",
+    displayName: "root assembly",
+    children: [
+      {
+        id: "part-a",
+        occurrenceId: "o1.1",
+        nodeType: "part",
+        displayName: "part A",
+        children: []
+      },
+      {
+        id: "part-b",
+        occurrenceId: "o1.2",
+        nodeType: "part",
+        displayName: "part B",
+        children: []
+      }
+    ]
+  };
+  const references = [
+    {
+      id: "o1.1.f1",
+      selectorType: "face",
+      displaySelector: "o1.1.f1",
+      occurrenceId: "o1.1",
+      partId: "part-a",
+      summary: "plane area=10"
+    },
+    {
+      id: "o1.2.f1",
+      selectorType: "face",
+      displaySelector: "o1.2.f1",
+      occurrenceId: "o1.2",
+      partId: "part-b",
+      summary: "plane area=20"
+    }
+  ];
+
+  const augmented = buildStepTreeRootWithTopology({
+    root,
+    references,
+    topologyPartIds: ["part-b"]
+  });
+
+  assert.deepEqual(
+    augmented.children.map((child) => [
+      child.id,
+      child.children.map((topologyChild) => topologyChild.displaySelector)
+    ]),
+    [
+      ["part-a", []],
+      ["part-b", ["o1.2.f1"]]
+    ]
+  );
+});
+
 test("STEP tree flattens redundant topology occurrence rows for single STEP roots", () => {
   const root = {
     id: STEP_MODEL_ROOT_ID,
@@ -529,9 +590,22 @@ test("STEP tree flattens redundant topology occurrence rows for single STEP root
     ]
   });
 
+  const folder = augmented.children[0];
+  assert.equal(folder.nodeType, "topology-folder");
+  assert.equal(folder.displayName, "base_plate");
+  assert.equal(folder.visualOnly, true);
+  assert.deepEqual(folder.leafPartIds, [STEP_MODEL_RENDER_PART_ID]);
   assert.deepEqual(
-    augmented.children.map((child) => [child.nodeType, child.displaySelector]),
+    folder.children.map((child) => [child.nodeType, child.displaySelector]),
     [["topology-face", "o1.f1"]]
+  );
+  assert.deepEqual(
+    flattenVisibleStepTreeRows(augmented, [folder.id], { omitRoot: true })
+      .map((row) => [row.nodeType, row.label, row.depth]),
+    [
+      ["topology-folder", "base_plate", 0],
+      ["topology-face", "Face f1", 1]
+    ]
   );
 });
 

@@ -7,36 +7,41 @@ product and `models/` as the shared fixture/artifact area.
 
 Before changing code, branch from `develop`, not `main`; PRs should target `develop`.
 Do not start development work from `main`. The `develop` branch intentionally uses
-symlinks across generated runtime, viewer-local package, and plugin package
-paths. When a path is symlinked, follow the link and edit the source target.
+symlinks across generated runtime and viewer-local package paths. When a path is
+symlinked, follow the link and edit the source target.
 Use `main` as the production clone/release branch only. `main` is publish-only:
 do not open PRs to `main` or push it directly.
 
 ## Release Workflow
 
-Normal development work targets `develop` and should not bump the canonical release
-version in `plugins/cad/VERSION`. To start a release, run the `Prepare Release`
-workflow with `base_branch=develop`; it creates a `release/<version>` branch,
-updates `plugins/cad/VERSION` and derived version metadata, and opens a PR back
-to `develop`. The `Test` workflow checks version metadata and runs a production
-bundle job on `develop` and PRs to `develop`, so production-output issues are
-caught before publishing. After a release PR merges, run `Publish` manually from
-the `develop` workflow ref with `source_ref=develop`; it ships only when the
-source version is newer than `main` and the latest semver tag, bundles real
-generated outputs, validates and tests that production layout, writes the
-publish merge commit on top of the previous publish target with the release
-source as the second parent for release-note attribution, creates the semver git
-tag, and opens a draft GitHub Release. Use `target_branch=main` only for a real
-release and `target_branch=build-test` for publish rehearsals. Pushing
-`develop` runs tests but does not publish `main`.
-Use `scripts/release/bump-version.sh` and
-`scripts/release/publish-github-release.sh` only as local/manual fallbacks for
-the GitHub workflows.
+Do not bump the canonical release version in `VERSION` during
+normal development work. Ship releases only through the single `Release`
+GitHub Actions workflow, which handles the version bump, release PR, publish
+commit to `main`, models upload, web-app deploys, semver tag, and GitHub
+Release in one run.
+
+When asked to publish, make, or ship a release, dispatch `Release` with its
+defaults: build from `develop` (`base_branch=develop`), publish to `main`
+(`target_branch=main`), and publish the GitHub Release (`publish=true`, not a
+draft). Never pick the semver bump yourself: if the request does not name
+patch, minor, major, or an exact version, ask which one before dispatching.
+Use `target_branch=build-test` only when the user explicitly asks to test
+CI/CD or build-pipeline changes — never by default and never as part of a
+requested release. Rerun `Release` with `set_version` pinned to the current
+version to resume a failed publish.
+
+The standalone `Deploy Docs` and `Deploy Viewer` workflows redeploy the
+individual web apps from `main`, and the standalone `Upload Models` workflow
+uploads the `models/` catalog to Vercel Blob from `develop`, all without
+running a release. `main` is publish-only; pushing `develop` runs tests but
+never publishes. See the Releases section in `CONTRIBUTING.md` for the full
+flow, CI/CD-testing and resume options, and local/manual fallbacks.
 
 ## Repo Map
 
 - `skills/`: agent skills and their references/scripts.
-- `plugins/`: versioned agent plugin packages that bundle repo skills.
+- `.claude-plugin/`, `.codex-plugin/`: agent plugin manifests. The repository
+  root is the plugin package; its skills are `skills/` directly.
 - `models/`: sample and durable CAD/robot-description fixtures.
 - `viewer/`: editable CAD Viewer source app.
 - `packages/cadjs`: shared JS CAD/render/runtime code, UI-framework agnostic.
@@ -59,8 +64,9 @@ the GitHub workflows.
   rules and pointers.
 - Read `CONTRIBUTING.md` before committing, rebasing, resolving generated-file
   conflicts, or bumping release versions.
-- Keep the `develop` checkout in symlink layout with
-  `scripts/dev/setup-symlinks.sh`.
+- Keep the primary local `develop` checkout in symlink layout with
+  `scripts/dev/setup-symlinks.sh`. Do not auto-repair that layout from
+  Codex or Claude Code startup hooks in linked worktrees.
 - Each skill must be self-contained and independent at runtime. A skill must
   not refer to or import or depend on code from another skill, from `skills/`
   root, or from repository-root modules. Do not add `skills/`, the repository
@@ -72,16 +78,29 @@ the GitHub workflows.
 - Edit the source reached by the `develop` symlink layout first, then regenerate
   explicit derived outputs when a production-output task requires it.
 - Write all test, sample, permanent, and generated CAD/robot-description
-  artifacts under `models/`, including STEP/STP, STL, GLB, DXF, URDF, SRDF,
-  SDF, and G-code outputs. Do not create ad hoc artifact directories elsewhere.
+  artifacts under `models/`, including STEP/STP, STL, 3MF, GLB, DXF, URDF,
+  SRDF, SDF, and G-code outputs. Do not create ad hoc artifact directories
+  elsewhere.
+- `models/` takes CAD/robot sources, the 3D and fabrication outputs generated
+  from them, and their docs — nothing else. Do not commit review media
+  (snapshot PNGs, orbit GIFs, screen recordings), data or metadata dumps,
+  archives, foreign CAD sources, or runtime debris there; render review images
+  under `/tmp` and attach them to the conversation or PR. The File Policy
+  section of `models/README.md` is the authoritative list, enforced by
+  `tests/python/global/test_models_directory_policy.py`.
 - Reserve `scripts/` for durable repo commands. Do not write temporary,
   one-off, or local-only helper scripts there; use `tmp/` or `/tmp` instead.
 - Development symlinks mark generated or copied paths. If a file is under a
-  symlinked runtime, viewer package, or plugin package path, edit the symlink
-  target/source path instead of treating the copy as independent.
-- When source changes affect generated runtimes or plugin packages, refresh or
-  check them with the master bundle wrapper, `scripts/bundle/bundle.sh`. Use
-  lower-level bundle scripts only when debugging the wrapper itself.
+  symlinked runtime or viewer package path, edit the symlink target/source path
+  instead of treating the copy as independent.
+- When source changes affect generated runtimes, refresh or check them with the
+  master bundle wrapper, `scripts/bundle/bundle.sh`. Use lower-level bundle
+  scripts only when debugging the wrapper itself.
+- Never let a symlink reach the published tree. Agent installers disagree about
+  symlinks and one loses data silently: the Skills CLI dereferences them, Claude
+  Code preserves them, and Codex `plugin add` drops them with no error, shipping
+  a skill with missing files. `scripts/github-workflows/check-builds.sh` enforces
+  this; do not relax it.
 - `packages/cadjs` must stay reusable/non-React; app UI and workflow state
   belong in `viewer/`.
 - `packages/implicitjs` must stay reusable/non-React and independent of
@@ -93,18 +112,29 @@ the GitHub workflows.
   helper should not inherit heavier package dependencies.
 - Use path-targeted search, validation, and `git status`; avoid broad scans over
   generated CAD/LFS artifacts unless the task requires them.
-- Treat `plugins/cad/VERSION` as the canonical release version. Do not hand-edit
-  duplicate package, plugin, lockfile, or Python `pyproject.toml` versions;
-  release preparation and `scripts/bundle/bundle.sh` stamp them from the
-  canonical version.
+- Treat `VERSION` as the canonical release version. Do not hand-edit duplicate
+  package, plugin, lockfile, or Python `pyproject.toml` versions; release
+  preparation and `scripts/bundle/bundle.sh` stamp them from the canonical
+  version.
 
 ## Environments
 
 - Prefer `./.venv/bin/python` for CAD Python work.
-- When creating a new branch checkout or git worktree for CAD work, copy the
-  installed `.venv/` from the source checkout into the new checkout as a
-  bootstrap cache, then run the branch's dependency install/sync for the
-  workflow being changed so dependency changes are reconciled locally.
+- Keep new branch checkouts and git worktrees lightweight by default. Do not
+  copy `.venv/` or `models/` through `.worktreeinclude`; recreate `.venv/`
+  inside the worktree only when Python dependencies are needed for the workflow.
+- In Codex or Claude Code worktrees, prefer the skill instructions and scripts
+  under the current worktree's `skills/` directory over globally installed
+  skill symlinks from another checkout.
+- If a worktree explicitly needs the development symlink layout, run
+  `scripts/dev/setup-symlinks.sh --check` and then
+  `scripts/dev/setup-symlinks.sh` intentionally in that worktree.
+- Hydrate `models/` only when the user asks for it or when the task targets
+  specific files under `models/`. In a new worktree, make the relevant model
+  paths real before using them, preferring the local Git LFS cache with
+  `git lfs checkout <path>` or `git lfs checkout models`. Download missing LFS
+  objects only when explicitly requested or required after confirming the local
+  cache is missing them.
 - Install dependencies only for the workflow being changed.
 - Do not commit `.venv/`, `node_modules/`, caches, `tmp/`, local credentials, or
   printer config.
@@ -115,17 +145,19 @@ Run the smallest path-targeted check that covers the change. Use broad wrappers
 when touching shared surfaces or before handoff:
 
 - Code tests: `scripts/test/test.sh`
-  - In GitHub Actions, `test.yml` checks the canonical release version as a
-    separate non-blocking job, verifies the `develop` symlink layout on `develop`,
-    and runs a temporary production bundle check plus docs checks for `develop`.
-    `main` writes are validated by `publish.yml`; GitHub branch settings should
-    block PRs and direct pushes to `main`.
+  - In GitHub Actions, `test.yml` checks the canonical release version in a
+    separate job so code tests still run when version metadata is wrong; its
+    test job verifies the `develop` symlink layout, checks generated outputs
+    against their sources, bundles temporary production outputs, and runs docs
+    and code tests against that bundle. `main` writes are validated by the
+    `Release` workflow's publish job; GitHub branch settings should block PRs
+    and direct pushes to `main`.
 - Focused test runners: `scripts/test/test-js.sh`,
   `scripts/test/test-docs.sh`, `scripts/test/test-python.sh`,
   `scripts/test/test-global.sh`
 - Development symlink layout: `scripts/dev/setup-symlinks.sh --check`
 - Canonical release version: `scripts/release/check-version.sh`
-- Generated runtime and plugin freshness: `scripts/bundle/bundle.sh --check`
+- Generated runtime freshness: `scripts/bundle/bundle.sh --check`
 - CAD Viewer, `packages/cadjs`, or `packages/implicitjs`:
   `npm --prefix packages/cadjs test`, `npm --prefix packages/implicitjs test`,
   `npm --prefix viewer run test`, `npm --prefix viewer run build`
@@ -143,16 +175,24 @@ When reviewing repo fixtures in CAD Viewer, point the Viewer at the repo
 generated CAD/robot-description files in `models/` so the viewer catalog and
 artifacts stay in one place.
 
-Start or reuse the Viewer through the `cad-viewer` skill launcher and use the
-base URL it prints. The launcher owns port selection, reuses a compatible live
-Viewer for the same worktree/branch, and uses the source app in Vite dev mode
-when the skill viewer path is a development symlink.
+Start or reuse the Viewer through the `serve` entrypoint documented in
+`skills/cad-viewer/SKILL.md` and use the base URL it prints. `serve` is the only
+startup command the bundled skill runtime ships, so document and use it in both
+layouts; it owns port selection, binding `4178` when free and scanning forward
+when it is not.
 
 Run from `skills/cad-viewer`:
 
 ```bash
-npm --prefix scripts/viewer run agent:start -- --host 127.0.0.1 --shutdown-after 12h
+npm --prefix scripts/viewer run serve -- --host 127.0.0.1 --dir <absolute-model-root> --shutdown-after 12h --json
 ```
+
+`--dir` is required for a useful catalog and must be absolute. Read the bound
+port from the `--json` startup line rather than assuming `4178`.
+
+`viewer/scripts/start-agent-viewer.mjs` (`npm run agent:start`) is a
+source-checkout-only launcher that adds Vite dev mode and cross-worktree reuse.
+It is not bundled into the skill runtime, so never document it in `skills/`.
 
 Every returned Viewer URL must include `?dir=<absolute-model-root>`, commonly
 `<repo>/models`, and `file=<path>` values must be relative to `?dir=`. Do not

@@ -92,8 +92,12 @@ npm run serve
 ```
 
 Then open the printed server URL with
-`?dir=/absolute/root&file=model.step`. Pass `--port <number>` to
-`npm run serve --` only when the default production port is already in use.
+`?dir=/absolute/root&file=model.step`. The server binds `4178` by default and
+scans forward when that port is taken, printing the port it actually bound. Pass
+`--port <number>` only to pin a different starting port, `--port-scan-limit 0`
+to fail instead of scanning, and `--json` to emit a machine-readable
+`{"url":...,"host":...,"port":...,"action":"start"}` line as the last stdout
+line once the listener is bound.
 
 ## Vercel Blob
 
@@ -101,6 +105,16 @@ Then open the printed server URL with
 deployments construct it in read-only mode: the hosted API reads the catalog and
 serves public Blob assets, but it does not write Blob objects or regenerate STEP
 artifacts.
+
+Hosted catalog reads are deliberately conservative about Blob traffic.
+Sustained per-request fetches of the public catalog URL from shared serverless
+egress IPs trip Vercel's abuse mitigation with intermittent `403 Forbidden`
+responses, so the hosted backend caches the parsed catalog in-function for 60
+seconds (serving the last good catalog if a refresh fails), hosted
+`/__cad/catalog` responses carry `s-maxage`/`stale-while-revalidate`
+cache-control so the Vercel CDN absorbs client polling, and hosted viewer
+builds poll the catalog every 60 seconds instead of the local 2-second
+development cadence.
 
 Expected deployment shape:
 
@@ -160,7 +174,11 @@ by default, and public Blob catalogs omit Python source paths and URLs. Add
 against the remote catalog, skip matching assets, and fetch only the Git LFS
 objects needed for new or changed uploads. The repository publish wrapper,
 `scripts/viewer/upload-viewer-models-catalog.sh`, owns the branch-defined Blob
-path prefix for model catalog uploads.
+path prefix for model catalog uploads. Catalog uploads use Vercel Blob's
+minimum supported cache TTL so in-place `catalog.json` overwrites are visible
+quickly, while large immutable model assets keep the default Blob cache policy.
+Hosted catalog reads also append a catalog cache-busting query parameter so the
+viewer does not inherit stale edge entries from earlier catalog overwrites.
 
 For token-free read-only deployments, `VIEWER_VERCEL_BLOB_PREFIX` should be the
 public Blob URL for the prefix directory. The hosted backend always reads

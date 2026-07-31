@@ -56,6 +56,11 @@ Accepted input fields:
 - `url`: source URL for non-STEP GLB loading.
 - `glbUrl` or `resolved.glbUrl`: STEP/STP hidden GLB sidecar URL.
 - `cadPath` or `resolved.inputPath`: CAD path used by STEP selectors.
+- A caller that passes a `resolved` packet together with any source URL must also pass
+  `resolved.inputPath`. Render asset caches are page-lifetime, so a resolved job has to name the
+  source its cache entries belong to; a resolved job without `inputPath` is rejected rather than
+  cached under an unidentified source. Callers with no `resolved` packet (the interactive viewer and
+  the docs hero renderer) render one source per page and need nothing.
 - `selectorRuntime` and `displayEdgeRuntime`: preloaded runtimes when a caller
   already owns sidecar loading.
 - `stepParameters`: raw STEP render values or animation envelope.
@@ -342,6 +347,11 @@ try {
   viewport.dispose();
 }
 ```
+
+Orbit GIF jobs default to 6 fps over 12 seconds for a calmer review spin
+without increasing default render frame count.
+Override with `orbit.fps` and `orbit.durationSeconds` when a shorter or denser
+render is needed.
 
 ## Ownership Rules
 

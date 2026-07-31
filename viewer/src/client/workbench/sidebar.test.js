@@ -7,21 +7,17 @@ import {
   findSidebarDirectoryById,
   findEntryByUrlPath,
   missingFileRefForCatalog,
-  cadRefQueryParamsFromUrl,
   selectedEntryKeyFromUrl,
   listSidebarItems,
   filenameLabelForEntry,
   normalizeCadFileQueryParam,
-  normalizeCadRefQueryParams,
   readCadDirParam,
-  readNavigationCadRefQueryParams,
   sidebarDirectoryPath,
   sidebarDirectoryIdForEntry,
   sidebarLabelForEntry,
   shouldDeferFileParamSelection,
   writeCadDirParam,
-  writeCadParam,
-  writeCadRefQueryParams
+  writeCadParam
 } from "./sidebar.js";
 import {
   buildAvailableThemePresets,
@@ -1360,9 +1356,9 @@ test("theme persistence ignores previous theme library versions", () => {
   try {
     const previousWorkbenchTheme = normalizeThemeSettings({
       ...cloneThemePresetSettings("workbench"),
-      edges: {
-        ...cloneThemePresetSettings("workbench").edges,
-        topologyFilter: "feature"
+      materials: {
+        ...cloneThemePresetSettings("workbench").materials,
+        brightness: 1.08
       }
     });
     globalThis.window.localStorage.setItem(
@@ -1679,10 +1675,6 @@ test("theme persistence ignores legacy full preset payloads", () => {
     legacyCinematic.materials.clearcoat = 0.18;
     legacyCinematic.materials.clearcoatRoughness = 0.34;
     legacyCinematic.materials.envMapIntensity = 0.58;
-    legacyCinematic.edges.enabled = false;
-    legacyCinematic.edges.color = "#8fa1b5";
-    legacyCinematic.edges.opacity = 0.1;
-    legacyCinematic.edges.thickness = 1;
     legacyCinematic.background.solidColor = "#050711";
     legacyCinematic.background.linearStart = "#02040b";
     legacyCinematic.background.linearEnd = "#252f47";
@@ -1717,51 +1709,6 @@ test("theme persistence ignores legacy full preset payloads", () => {
     globalThis.window.localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(legacyCinematic));
 
     assert.deepEqual(readThemeSettings(), cloneThemePresetSettings("workbench"));
-  } finally {
-    if (originalWindow === undefined) {
-      delete globalThis.window;
-    } else {
-      globalThis.window = originalWindow;
-    }
-  }
-});
-
-test("normalizeCadRefQueryParams accepts selector refs", () => {
-  assert.deepEqual(
-    normalizeCadRefQueryParams(["#f2", "o1.2,f1", "m2"]),
-    ["#f2", "#o1.2,o1.2.f1", "#m2"]
-  );
-});
-
-test("cadRefQueryParamsFromUrl reads encoded mate refs", () => {
-  assert.deepEqual(
-    cadRefQueryParamsFromUrl("http://viewer.test/?file=assembly.step&refs=%23m2"),
-    ["#m2"]
-  );
-  assert.deepEqual(
-    cadRefQueryParamsFromUrl("http://viewer.test/?file=assembly.step&refs=m2"),
-    ["#m2"]
-  );
-});
-
-test("readNavigationCadRefQueryParams recovers original URL refs", () => {
-  const originalWindow = globalThis.window;
-  globalThis.window = {
-    location: {
-      href: "http://viewer.test/?file=assembly.step",
-      search: "?file=assembly.step"
-    },
-    performance: {
-      getEntriesByType: (type) => (
-        type === "navigation"
-          ? [{ name: "http://viewer.test/?file=assembly.step&refs=%23m2" }]
-          : []
-      )
-    }
-  };
-
-  try {
-    assert.deepEqual(readNavigationCadRefQueryParams(), ["#m2"]);
   } finally {
     if (originalWindow === undefined) {
       delete globalThis.window;
@@ -1870,7 +1817,7 @@ test("selectedEntryKeyFromUrl does not fall back to VIEWER_DEFAULT_FILE for miss
   }
 });
 
-test("selectedEntryKeyFromUrl does not use refs to mask a missing explicit file param", () => {
+test("selectedEntryKeyFromUrl ignores retired refs when explicit file param is missing", () => {
   const originalWindow = globalThis.window;
   globalThis.window = {
     location: {
@@ -1898,7 +1845,7 @@ test("selectedEntryKeyFromUrl does not use refs to mask a missing explicit file 
   }
 });
 
-test("selectedEntryKeyFromUrl does not use selector refs as file identity", () => {
+test("selectedEntryKeyFromUrl ignores retired refs as file identity", () => {
   const originalWindow = globalThis.window;
   globalThis.window = {
     location: {
@@ -2141,7 +2088,7 @@ test("normalizeCadFileQueryParam normalizes file params as relative paths", () =
   assert.equal(normalizeCadFileQueryParam("/workspace/imports/widget.step/"), "workspace/imports/widget.step");
 });
 
-test("selectedEntryKeyFromUrl ignores selector refs without a file context", () => {
+test("selectedEntryKeyFromUrl ignores retired refs without a file context", () => {
   const originalWindow = globalThis.window;
   globalThis.window = {
     location: {
@@ -2179,9 +2126,9 @@ test("writeCadParam skips unchanged URL replacements", () => {
   const calls = [];
   globalThis.window = {
     location: {
-      href: "http://viewer.test/?file=parts%2Fsample_plate.step&refs=f2",
+      href: "http://viewer.test/?file=parts%2Fsample_plate.step",
       pathname: "/",
-      search: "?file=parts%2Fsample_plate.step&refs=f2",
+      search: "?file=parts%2Fsample_plate.step",
       hash: ""
     },
     history: {
@@ -2195,7 +2142,35 @@ test("writeCadParam skips unchanged URL replacements", () => {
 
     writeCadParam("parts/sample_base.step");
     assert.equal(calls.length, 1);
-    assert.equal(calls[0][2], "/?file=parts%2Fsample_base.step&refs=f2");
+    assert.equal(calls[0][2], "/?file=parts%2Fsample_base.step");
+  } finally {
+    if (originalWindow === undefined) {
+      delete globalThis.window;
+    } else {
+      globalThis.window = originalWindow;
+    }
+  }
+});
+
+test("writeCadParam drops retired refs query params", () => {
+  const originalWindow = globalThis.window;
+  const calls = [];
+  globalThis.window = {
+    location: {
+      href: "http://viewer.test/?file=parts%2Fsample_plate.step&refs=f2",
+      pathname: "/",
+      search: "?file=parts%2Fsample_plate.step&refs=f2",
+      hash: ""
+    },
+    history: {
+      replaceState: (...args) => calls.push(args)
+    }
+  };
+
+  try {
+    writeCadParam("parts/sample_plate.step");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0][2], "/?file=parts%2Fsample_plate.step");
   } finally {
     if (originalWindow === undefined) {
       delete globalThis.window;
@@ -2256,7 +2231,7 @@ test("writeCadParam stores active dir and omits dir for directory file selection
     const nextUrl = new URL(`http://viewer.test${calls[0][2]}`);
     assert.equal(nextUrl.searchParams.has("dir"), false);
     assert.equal(nextUrl.searchParams.get("file"), "hero/planetary_gear_assembly.step.glb");
-    assert.equal(nextUrl.searchParams.get("refs"), "#f2");
+    assert.equal(nextUrl.searchParams.has("refs"), false);
     assert.equal(readStoredActiveCadDir(), "docs/public");
   } finally {
     if (originalWindow === undefined) {
@@ -2352,39 +2327,8 @@ test("writeCadDirParam selects a workspace and clears file selection", () => {
     const nextUrl = new URL(`http://viewer.test${calls[0][3]}`);
     assert.equal(nextUrl.searchParams.get("dir"), "/workspace/models");
     assert.equal(nextUrl.searchParams.has("file"), false);
-    assert.equal(nextUrl.searchParams.get("refs"), "f2");
+    assert.equal(nextUrl.searchParams.has("refs"), false);
     assert.equal(readStoredActiveCadDir(), "/workspace/models");
-  } finally {
-    if (originalWindow === undefined) {
-      delete globalThis.window;
-    } else {
-      globalThis.window = originalWindow;
-    }
-  }
-});
-
-test("writeCadRefQueryParams skips unchanged URL replacements", () => {
-  const originalWindow = globalThis.window;
-  const calls = [];
-  globalThis.window = {
-    location: {
-      href: "http://viewer.test/?file=parts%2Fsample_plate.step&refs=f2",
-      pathname: "/",
-      search: "?file=parts%2Fsample_plate.step&refs=f2",
-      hash: ""
-    },
-    history: {
-      replaceState: (...args) => calls.push(args)
-    }
-  };
-
-  try {
-    writeCadRefQueryParams(["#f2"]);
-    assert.equal(calls.length, 0);
-
-    writeCadRefQueryParams(["#e1"]);
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0][2], "/?file=parts%2Fsample_plate.step&refs=e1");
   } finally {
     if (originalWindow === undefined) {
       delete globalThis.window;

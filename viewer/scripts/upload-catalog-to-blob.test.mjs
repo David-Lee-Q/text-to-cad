@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  carryForwardRemoteArtifactStatuses,
   createIgnoreMatcher,
   DEFAULT_UPLOAD_EXCLUDE_PATTERNS,
   parseIgnorePatterns,
@@ -143,6 +144,14 @@ test("rewriteCatalogForBlob annotates STEP assets without publishing Python sour
           sourceKind: "python",
           sourcePath: "models/parts/bracket.py",
         },
+        artifact: {
+          ok: false,
+          error: "missing_source_path",
+          sourceKind: "python",
+          stepPath: "parts/bracket.step",
+          glbPath: "parts/.bracket.step.glb",
+          message: "GLB STEP_topology is missing required sourcePath identity: parts/.bracket.step.glb.",
+        },
       },
     ],
   }, {
@@ -160,7 +169,37 @@ test("rewriteCatalogForBlob annotates STEP assets without publishing Python sour
   assert.equal(catalog.entries[0].sourceKind, "python");
   assert.equal(catalog.entries[0].source, undefined);
   assert.equal(catalog.entries[0].sourceStatus, undefined);
+  assert.equal(catalog.entries[0].artifact, undefined);
   assert.equal(JSON.stringify(catalog).includes(".py"), false);
+});
+
+test("rewriteCatalogForBlob keeps non-source-path STEP artifact warnings", () => {
+  const repoRoot = makeTempRepo();
+  const rootPath = path.join(repoRoot, "models");
+  const catalog = rewriteCatalogForBlob({
+    schemaVersion: 4,
+    entries: [
+      {
+        file: "parts/bracket.step",
+        kind: "part",
+        sourceKind: "python",
+        artifact: {
+          ok: false,
+          error: "missing_edge_topology",
+          sourceKind: "python",
+          stepPath: "parts/bracket.step",
+          glbPath: "parts/.bracket.step.glb",
+          message: "STEP topology validation requires readable STEP_topology edgeView in the GLB.",
+        },
+      },
+    ],
+  }, {
+    uploads: new Map(),
+    repoRoot,
+    rootPath,
+  });
+
+  assert.equal(catalog.entries[0].artifact.error, "missing_edge_topology");
 });
 
 test("uploadCatalogDirectoryToVercelBlob applies default catalog exclusions", async () => {
@@ -209,6 +248,8 @@ test("uploadCatalogDirectoryToVercelBlob applies default catalog exclusions", as
   assert.equal(result.rootPath, path.join(repoRoot, "models"));
 
   const catalogUpload = putCalls.find((call) => call.pathname === "models2/catalog.json");
+  assert.equal(catalogUpload.options.cacheControlMaxAge, 60);
+  assert.equal(putCalls.find((call) => call.pathname === "models2/keep.stl").options.cacheControlMaxAge, undefined);
   const uploadedCatalog = JSON.parse(catalogUpload.body);
   assert.deepEqual(uploadedCatalog.entries.map((entry) => entry.file), ["keep.stl", "part.step"]);
   assert.equal(uploadedCatalog.entries[0].url, "https://blob.test/models2/keep.stl");
@@ -282,6 +323,7 @@ test("uploadCatalogDirectoryToVercelBlob skips assets already present in the rem
   assert.equal(result.skippedFiles, 1);
 
   const uploadedCatalog = JSON.parse(putCalls.find((call) => call.pathname === "models2/catalog.json").body);
+  assert.equal(putCalls.find((call) => call.pathname === "models2/catalog.json").options.cacheControlMaxAge, 60);
   const existingEntry = uploadedCatalog.entries.find((entry) => entry.file === "existing.stl");
   assert.equal(existingEntry.url, "https://blob.test/models2/existing.stl");
   assert.equal(existingEntry.hash, existingHash);
@@ -346,4 +388,89 @@ test("uploadCatalogDirectoryToVercelBlob honors positional directory from npm ca
   assert.equal(result.catalogEntries, 1);
   assert.equal(result.rootDir, "");
   assert.equal(result.rootPath, path.join(repoRoot, "models"));
+});
+
+test("carryForwardRemoteArtifactStatuses reuses remote status for unchanged LFS pointer artifacts", () => {
+  const rootPath = makeTempRepo();
+  const glbHash = fullHash("real glb bytes");
+  writeFile(path.join(rootPath, ".part.step.glb"), gitLfsPointer({ oid: glbHash, size: 1234 }));
+  writeFile(path.join(rootPath, ".real.step.glb"), "actual binary content");
+
+  const pointerWarning = {
+    ok: false,
+    error: "missing_step_topology",
+    glbPath: ".part.step.glb",
+    message: "STEP topology validation requires readable STEP_topology indexView in the GLB: .part.step.glb.",
+  };
+  const realFileWarning = {
+    ok: false,
+    error: "missing_step_topology",
+    glbPath: ".real.step.glb",
+    message: "STEP topology validation requires readable STEP_topology indexView in the GLB: .real.step.glb.",
+  };
+  const catalog = {
+    schemaVersion: 4,
+    entries: [
+      { file: "part.step", hash: glbHash, artifact: pointerWarning },
+      { file: "real.step", hash: fullHash("actual binary content"), artifact: realFileWarning },
+      { file: "changed.step", hash: "different-local-hash", artifact: { ...pointerWarning } },
+    ],
+  };
+  const existingCatalog = {
+    schemaVersion: 4,
+    entries: [
+      { file: "part.step", hash: glbHash },
+      { file: "real.step", hash: fullHash("actual binary content") },
+      { file: "changed.step", hash: "remote-hash" },
+    ],
+  };
+
+  const result = carryForwardRemoteArtifactStatuses(catalog, { existingCatalog, rootPath });
+
+  assert.equal(result.entries.find((entry) => entry.file === "part.step").artifact, undefined);
+  assert.deepEqual(
+    result.entries.find((entry) => entry.file === "real.step").artifact,
+    realFileWarning,
+  );
+  assert.deepEqual(
+    result.entries.find((entry) => entry.file === "changed.step").artifact,
+    pointerWarning,
+  );
+});
+
+test("carryForwardRemoteArtifactStatuses copies remote warnings instead of pointer-derived ones", () => {
+  const rootPath = makeTempRepo();
+  const glbHash = fullHash("glb with legit warning");
+  writeFile(path.join(rootPath, ".warned.step.glb"), gitLfsPointer({ oid: glbHash, size: 99 }));
+
+  const remoteWarning = {
+    ok: false,
+    error: "unsupported_step_topology",
+    glbPath: ".warned.step.glb",
+    message: "STEP topology validation requires STEP_topology schemaVersion 2 in the GLB.",
+  };
+  const result = carryForwardRemoteArtifactStatuses(
+    {
+      schemaVersion: 4,
+      entries: [{
+        file: "warned.step",
+        hash: glbHash,
+        artifact: {
+          ok: false,
+          error: "missing_step_topology",
+          glbPath: ".warned.step.glb",
+          message: "unreadable pointer",
+        },
+      }],
+    },
+    {
+      existingCatalog: {
+        schemaVersion: 4,
+        entries: [{ file: "warned.step", hash: glbHash, artifact: remoteWarning }],
+      },
+      rootPath,
+    },
+  );
+
+  assert.deepEqual(result.entries[0].artifact, remoteWarning);
 });

@@ -12,8 +12,15 @@ import {
   normalizeDisplayMode
 } from "./cadScene.js";
 import {
+  DEFAULT_DISPLAY_EDGE_SETTINGS
+} from "./displaySettings.js";
+import {
   cloneThemeSettings
 } from "./themeSettings.js";
+import {
+  PART_SELECTED_HIGHLIGHT_BLEND,
+  partHighlightSurfaceColor
+} from "../lib/viewer/partHighlight.js";
 
 function sampleMeshData() {
   return {
@@ -218,6 +225,37 @@ test("applyPartVisualState keeps dimmed context from depth-occluding highlights"
   assert.equal(selected.edges.renderOrder, 3);
 });
 
+test("applyPartVisualState highlights and ghosts identically to the viewer path", () => {
+  const selected = createDisplayRecord("selected");
+  const children = [];
+  selected.mesh = { visible: true, renderOrder: 2, add: (child) => children.push(child) };
+  selected.geometry = new THREE.BufferGeometry();
+
+  applyPartVisualState(THREE, [selected], {
+    baseTheme: {},
+    edgeSettings: {},
+    hiddenPartIds: [],
+    hoveredPartId: "",
+    focusedPartId: [],
+    selectedPartIds: ["selected"],
+    showEdges: true
+  });
+
+  // Headless renders must use the same blended surface highlight as the viewer
+  // so snapshots and docs GIFs match what the CAD Viewer shows.
+  const expected = partHighlightSurfaceColor(
+    THREE,
+    new THREE.Color("#aaaaaa"),
+    new THREE.Color("#4f9dff"),
+    PART_SELECTED_HIGHLIGHT_BLEND
+  );
+  assert.equal(selected.material.color.getHexString(), expected.getHexString());
+  assert.equal(selected.material.emissive.getHexString(), new THREE.Color("#4f9dff").getHexString());
+  assert.ok(selected.ghostMesh, "headless selection attaches the occlusion ghost");
+  assert.equal(selected.ghostMesh.visible, true);
+  assert.equal(selected.ghostMaterial.depthFunc, THREE.GreaterDepth);
+});
+
 test("buildModel renders solid part records and updates theme without rebuilding geometry", () => {
   const theme = cloneThemeSettings("workbench");
   const scene = buildModel(THREE, sampleMeshData(), {
@@ -413,12 +451,12 @@ test("buildModel rebuilds surface edge shader materials when edge theme settings
     theme: {
       ...theme,
       edges: {
-        ...theme.edges,
+        ...DEFAULT_DISPLAY_EDGE_SETTINGS,
         color: "#0055ff",
         classes: {
-          ...theme.edges.classes,
+          ...DEFAULT_DISPLAY_EDGE_SETTINGS.classes,
           tangent: {
-            ...theme.edges.classes.tangent,
+            ...DEFAULT_DISPLAY_EDGE_SETTINGS.classes.tangent,
             thickness: 2.5
           }
         }
@@ -537,13 +575,58 @@ test("buildModel display modes control edges, transparency, and flat surfaces", 
   unshadedScene.dispose();
 });
 
+test("buildModel applies source part opacity from GLB material metadata", () => {
+  const meshData = sampleMeshData();
+  meshData.parts = meshData.parts.map((part, index) => index === 0
+    ? { ...part, color: "#ff0000", opacity: 0.2, hasSourceColors: true }
+    : part
+  );
+  const scene = buildModel(THREE, meshData, {
+    theme: cloneThemeSettings("workbench"),
+    renderPartsIndividually: true
+  });
+
+  const left = scene.displayRecords.find((record) => record.partId === "left");
+
+  assert.equal(left.baseOpacity, 0.2);
+  assert.equal(left.material.opacity, 0.2);
+  assert.equal(left.material.transparent, true);
+  assert.equal(left.material.depthWrite, false);
+  scene.dispose();
+});
+
+test("buildModel uses part records when only source opacity differs", () => {
+  const meshData = sampleMeshData();
+  meshData.sourceColor = "#ff0000";
+  meshData.has_source_colors = true;
+  meshData.parts = meshData.parts.map((part) => ({
+    ...part,
+    color: "#ff0000",
+    opacity: 0.2,
+    hasSourceColors: true
+  }));
+  const scene = buildModel(THREE, meshData, {
+    theme: cloneThemeSettings("workbench"),
+    renderPartsIndividually: false
+  });
+
+  assert.equal(scene.displayRecords.length, 2);
+  for (const record of scene.displayRecords) {
+    assert.equal(record.baseOpacity, 0.2);
+    assert.equal(record.material.opacity, 0.2);
+    assert.equal(record.material.transparent, true);
+    assert.equal(record.material.depthWrite, false);
+  }
+  scene.dispose();
+});
+
 test("buildModel ignores deprecated mesh edge detail and keeps wireframe all-edge mode", () => {
   const baseTheme = cloneThemeSettings("workbench");
   const deprecatedDetailScene = buildModel(THREE, squareMeshData(), {
     theme: {
       ...baseTheme,
       edges: {
-        ...baseTheme.edges,
+        ...DEFAULT_DISPLAY_EDGE_SETTINGS,
         topologyFilter: "all"
       }
     },
@@ -588,7 +671,7 @@ test("buildModel can render silhouette contours without derived mesh edges", () 
     theme: {
       ...theme,
       edges: {
-        ...theme.edges,
+        ...DEFAULT_DISPLAY_EDGE_SETTINGS,
         enabled: false,
         silhouette: true,
         silhouetteScale: 0.004

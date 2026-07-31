@@ -1,5 +1,7 @@
 import path from "node:path";
 
+export const CATALOG_BLOB_CACHE_CONTROL_MAX_AGE_SECONDS = 60;
+
 function normalizePrefix(value) {
   const rawValue = String(value || "").trim();
   if (!rawValue) {
@@ -38,6 +40,16 @@ function publicBlobUrlForRef(prefix, fileRef) {
   }
 }
 
+function cacheBypassedCatalogUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    url.searchParams.set("_tcad_catalog", "1");
+    return url.toString();
+  } catch {
+    return value;
+  }
+}
+
 function normalizeFileRef(value) {
   const normalized = path.posix.normalize(String(value || "").trim().replace(/\\/g, "/").replace(/^\/+/, ""));
   return normalized && normalized !== "." && !normalized.startsWith("../") ? normalized : "";
@@ -55,6 +67,59 @@ function catalogEntryForFileRef(catalog, fileRef) {
 
 function normalizeString(value) {
   return String(value || "").trim();
+}
+
+function sourceKindIsPython(value) {
+  return normalizeString(value).toLowerCase() === "python";
+}
+
+function artifactErrorCode(artifact) {
+  const rawError = artifact?.error;
+  if (rawError && typeof rawError === "object" && !Array.isArray(rawError)) {
+    return normalizeString(rawError.code);
+  }
+  return normalizeString(rawError || artifact?.code);
+}
+
+function shouldSuppressHostedPythonArtifactWarning(entry) {
+  const artifact = entry?.artifact;
+  if (!artifact || typeof artifact !== "object" || Array.isArray(artifact)) {
+    return false;
+  }
+  if (artifactErrorCode(artifact) !== "missing_source_path") {
+    return false;
+  }
+  return (
+    sourceKindIsPython(entry?.sourceKind) ||
+    sourceKindIsPython(entry?.stepSourceKind) ||
+    sourceKindIsPython(artifact?.sourceKind)
+  );
+}
+
+function normalizeVercelBlobCatalogEntry(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    return entry;
+  }
+  if (!shouldSuppressHostedPythonArtifactWarning(entry)) {
+    return entry;
+  }
+  const { artifact, ...nextEntry } = entry;
+  return nextEntry;
+}
+
+export function normalizeVercelBlobCatalog(catalog) {
+  if (!catalog || typeof catalog !== "object" || Array.isArray(catalog) || !Array.isArray(catalog.entries)) {
+    return catalog;
+  }
+  let changed = false;
+  const entries = catalog.entries.map((entry) => {
+    const nextEntry = normalizeVercelBlobCatalogEntry(entry);
+    if (nextEntry !== entry) {
+      changed = true;
+    }
+    return nextEntry;
+  });
+  return changed ? { ...catalog, entries } : catalog;
 }
 
 function sourceUrlFromEntry(entry) {
@@ -168,13 +233,30 @@ async function loadBlobClient(client) {
   }
 }
 
+async function blobErrorDetail(response) {
+  const requestId = normalizeString(response.headers?.get?.("x-vercel-id"));
+  let body = "";
+  try {
+    body = normalizeString(await response.text()).slice(0, 200);
+  } catch {
+    body = "";
+  }
+  return [
+    requestId ? `request ${requestId}` : "",
+    body,
+  ].filter(Boolean).join(": ");
+}
+
 async function readJsonFromUrl(url, { fetchImpl = globalThis.fetch } = {}) {
   if (!fetchImpl) {
     throw new Error("Vercel Blob backend requires fetch to read catalog URLs");
   }
-  const response = await fetchImpl(url);
+  const response = await fetchImpl(cacheBypassedCatalogUrl(url));
   if (!response.ok) {
-    throw new Error(`Failed to read Vercel Blob catalog: ${response.status} ${response.statusText}`);
+    const detail = await blobErrorDetail(response);
+    throw new Error(
+      `Failed to read Vercel Blob catalog: ${response.status} ${response.statusText}${detail ? ` (${detail})` : ""}`
+    );
   }
   return response.json();
 }
@@ -205,18 +287,22 @@ export function createVercelBlobAssetBackend({
   fetchImpl = globalThis.fetch,
   token = process.env.VIEWER_VERCEL_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN,
   readOnly = false,
+  catalogCacheTtlMs = 0,
 } = {}) {
   const normalizedPrefix = normalizePrefix(prefix);
   const normalizedCatalogPath = joinBlobPath(normalizedPrefix, catalogPath || "catalog.json");
   const resolvedCatalogUrl = catalogUrl || publicBlobUrlForRef(prefix, catalogPath || "catalog.json");
+  let cachedCatalog = null;
+  let cachedCatalogAt = 0;
+  let catalogFetchInFlight = null;
 
   async function blobClient() {
     return loadBlobClient(client);
   }
 
-  async function readCatalog() {
+  async function fetchCatalog() {
     if (resolvedCatalogUrl) {
-      return readJsonFromUrl(resolvedCatalogUrl, { fetchImpl });
+      return normalizeVercelBlobCatalog(await readJsonFromUrl(resolvedCatalogUrl, { fetchImpl }));
     }
     if (hasBlobSdkReadCredentials(token)) {
       const blob = await blobClient();
@@ -225,10 +311,10 @@ export function createVercelBlobAssetBackend({
         if (token) {
           getOptions.token = token;
         }
-        return readJsonFromBlobGetResult(
+        return normalizeVercelBlobCatalog(await readJsonFromBlobGetResult(
           await blob.get(normalizedCatalogPath, getOptions),
           normalizedCatalogPath
-        );
+        ));
       }
     }
     const blob = await blobClient();
@@ -239,10 +325,47 @@ export function createVercelBlobAssetBackend({
     if (!catalogBlob?.url) {
       throw new Error(`Vercel Blob catalog not found: ${normalizedCatalogPath}`);
     }
-    return readJsonFromUrl(catalogBlob.url, { fetchImpl });
+    return normalizeVercelBlobCatalog(await readJsonFromUrl(catalogBlob.url, { fetchImpl }));
   }
 
-  async function writeAsset({ fileRef, body, contentType = "application/octet-stream" } = {}) {
+  async function fetchCatalogCached({ force = false } = {}) {
+    if (!(catalogCacheTtlMs > 0)) {
+      return fetchCatalog();
+    }
+    if (!force && cachedCatalog && Date.now() - cachedCatalogAt < catalogCacheTtlMs) {
+      return cachedCatalog;
+    }
+    if (!catalogFetchInFlight) {
+      catalogFetchInFlight = fetchCatalog().finally(() => {
+        catalogFetchInFlight = null;
+      });
+    }
+    try {
+      const catalog = await catalogFetchInFlight;
+      cachedCatalog = catalog;
+      cachedCatalogAt = Date.now();
+      return catalog;
+    } catch (error) {
+      if (cachedCatalog) {
+        console.warn(
+          `Serving cached Vercel Blob catalog after read failure: ${error instanceof Error ? error.message : String(error)}`
+        );
+        return cachedCatalog;
+      }
+      throw error;
+    }
+  }
+
+  async function readCatalog() {
+    return fetchCatalogCached();
+  }
+
+  async function writeAsset({
+    fileRef,
+    body,
+    contentType = "application/octet-stream",
+    cacheControlMaxAge,
+  } = {}) {
     const pathname = joinBlobPath(normalizedPrefix, fileRef);
     if (!pathname) {
       throw new Error("Missing Vercel Blob asset path");
@@ -253,23 +376,26 @@ export function createVercelBlobAssetBackend({
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType,
+      ...(cacheControlMaxAge !== undefined ? { cacheControlMaxAge } : {}),
       token,
     });
   }
 
   async function writeCatalog(catalog) {
+    const normalizedCatalog = normalizeVercelBlobCatalog(catalog);
     return writeAsset({
       fileRef: catalogPath || "catalog.json",
       body: JSON.stringify({
         schemaVersion: 4,
-        entries: Array.isArray(catalog?.entries) ? catalog.entries : [],
+        entries: Array.isArray(normalizedCatalog?.entries) ? normalizedCatalog.entries : [],
       }, null, 2),
       contentType: "application/json; charset=utf-8",
+      cacheControlMaxAge: CATALOG_BLOB_CACHE_CONTROL_MAX_AGE_SECONDS,
     });
   }
 
   async function refreshCatalog() {
-    return readCatalog();
+    return fetchCatalogCached({ force: true });
   }
 
   async function urlForBlobRef(fileRef) {

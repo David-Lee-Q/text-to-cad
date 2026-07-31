@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   contentTypeForFileRef,
   createVercelBlobAssetBackend,
+  normalizeVercelBlobCatalog,
 } from "./vercelBlobAssetBackend.mjs";
 
 test("Vercel Blob backend uses browser-safe MIME types for served modules", () => {
@@ -46,7 +47,7 @@ test("Vercel Blob backend reports public catalog URL failures instead of falling
     () => backend.readCatalog(),
     /Failed to read Vercel Blob catalog: 403 Forbidden/
   );
-  assert.deepEqual(fetchCalls, ["https://blob.test/demo/catalog.json"]);
+  assert.deepEqual(fetchCalls, ["https://blob.test/demo/catalog.json?_tcad_catalog=1"]);
   assert.deepEqual(getCalls, []);
 });
 
@@ -101,8 +102,62 @@ test("Vercel Blob backend prefers public catalog URLs when available", async () 
 
   assert.deepEqual(await backend.readCatalog(), {
     schemaVersion: 4,
-    url: "https://blob.test/demo/catalog.json",
+    url: "https://blob.test/demo/catalog.json?_tcad_catalog=1",
   });
+});
+
+test("Vercel Blob backend suppresses Python source-path artifact warnings", async () => {
+  const catalog = {
+    schemaVersion: 4,
+    entries: [
+      {
+        file: "parts/bracket.step",
+        kind: "part",
+        sourceKind: "python",
+        artifact: {
+          ok: false,
+          error: "missing_source_path",
+          sourceKind: "python",
+          stepPath: "parts/bracket.step",
+          glbPath: "parts/.bracket.step.glb",
+          message: "GLB STEP_topology is missing required sourcePath identity: parts/.bracket.step.glb.",
+        },
+      },
+      {
+        file: "parts/imported.step",
+        kind: "part",
+        sourceKind: "step",
+        artifact: {
+          ok: false,
+          error: "missing_source_path",
+          sourceKind: "step",
+        },
+      },
+      {
+        file: "parts/edge.step",
+        kind: "part",
+        sourceKind: "python",
+        artifact: {
+          ok: false,
+          error: "missing_edge_topology",
+          sourceKind: "python",
+        },
+      },
+    ],
+  };
+  const backend = createVercelBlobAssetBackend({
+    prefix: "demo",
+    catalogUrl: "https://blob.test/demo/catalog.json",
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => catalog,
+    }),
+  });
+
+  assert.equal(normalizeVercelBlobCatalog(catalog).entries[0].artifact, undefined);
+  assert.equal((await backend.readCatalog()).entries[0].artifact, undefined);
+  assert.equal((await backend.readCatalog()).entries[1].artifact.error, "missing_source_path");
+  assert.equal((await backend.readCatalog()).entries[2].artifact.error, "missing_edge_topology");
 });
 
 test("Vercel Blob backend reads catalog and writes deterministic asset paths", async () => {
@@ -127,7 +182,7 @@ test("Vercel Blob backend reads catalog and writes deterministic asset paths", a
   assert.equal("generateStepArtifact" in backend, false);
   assert.deepEqual(await backend.readCatalog(), {
     schemaVersion: 4,
-    url: "https://blob.test/catalog.json",
+    url: "https://blob.test/catalog.json?_tcad_catalog=1",
   });
   const result = await backend.writeAsset({
     fileRef: "models/.part.step.glb",
@@ -449,6 +504,119 @@ test("Vercel Blob backend can be constructed read-only for hosted deployments", 
   assert.equal(backend.catalogPath, "models2/catalog.json");
   assert.deepEqual(await backend.readCatalog(), {
     schemaVersion: 4,
-    url: "https://blob.test/models2/catalog.json",
+    url: "https://blob.test/models2/catalog.json?_tcad_catalog=1",
   });
+});
+
+test("Vercel Blob backend caches catalog reads inside the TTL", async () => {
+  const fetchCalls = [];
+  const backend = createVercelBlobAssetBackend({
+    prefix: "demo",
+    catalogUrl: "https://blob.test/demo/catalog.json",
+    catalogCacheTtlMs: 60_000,
+    fetchImpl: async (url) => {
+      fetchCalls.push(url);
+      return {
+        ok: true,
+        json: async () => ({ schemaVersion: 4, entries: [{ file: "parts/bracket.step" }] }),
+      };
+    },
+  });
+
+  const first = await backend.readCatalog();
+  const second = await backend.readCatalog();
+  assert.deepEqual(first, { schemaVersion: 4, entries: [{ file: "parts/bracket.step" }] });
+  assert.equal(second, first);
+  assert.equal(fetchCalls.length, 1);
+});
+
+test("Vercel Blob backend shares one in-flight catalog fetch across concurrent reads", async () => {
+  let fetchCount = 0;
+  let releaseFetch;
+  const fetchGate = new Promise((resolve) => {
+    releaseFetch = resolve;
+  });
+  const backend = createVercelBlobAssetBackend({
+    prefix: "demo",
+    catalogUrl: "https://blob.test/demo/catalog.json",
+    catalogCacheTtlMs: 60_000,
+    fetchImpl: async () => {
+      fetchCount += 1;
+      await fetchGate;
+      return {
+        ok: true,
+        json: async () => ({ schemaVersion: 4, entries: [] }),
+      };
+    },
+  });
+
+  const reads = Promise.all([backend.readCatalog(), backend.readCatalog(), backend.readCatalog()]);
+  releaseFetch();
+  await reads;
+  assert.equal(fetchCount, 1);
+});
+
+test("Vercel Blob backend serves the cached catalog when a refresh fails", async () => {
+  let failFetches = false;
+  let fetchCount = 0;
+  const backend = createVercelBlobAssetBackend({
+    prefix: "demo",
+    catalogUrl: "https://blob.test/demo/catalog.json",
+    catalogCacheTtlMs: 1,
+    fetchImpl: async () => {
+      fetchCount += 1;
+      if (failFetches) {
+        return { ok: false, status: 403, statusText: "Forbidden" };
+      }
+      return {
+        ok: true,
+        json: async () => ({ schemaVersion: 4, entries: [{ file: "parts/bracket.step" }] }),
+      };
+    },
+  });
+
+  const fresh = await backend.readCatalog();
+  failFetches = true;
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  const stale = await backend.readCatalog();
+  assert.equal(stale, fresh);
+  assert.equal(fetchCount, 2);
+});
+
+test("Vercel Blob backend surfaces catalog failures when no cached catalog exists", async () => {
+  const backend = createVercelBlobAssetBackend({
+    prefix: "demo",
+    catalogUrl: "https://blob.test/demo/catalog.json",
+    catalogCacheTtlMs: 60_000,
+    fetchImpl: async () => ({ ok: false, status: 403, statusText: "Forbidden" }),
+  });
+
+  await assert.rejects(
+    () => backend.readCatalog(),
+    /Failed to read Vercel Blob catalog: 403 Forbidden/
+  );
+});
+
+test("Vercel Blob backend refreshCatalog bypasses the catalog TTL cache", async () => {
+  let fetchCount = 0;
+  const backend = createVercelBlobAssetBackend({
+    prefix: "demo",
+    catalogUrl: "https://blob.test/demo/catalog.json",
+    catalogCacheTtlMs: 60_000,
+    fetchImpl: async () => {
+      fetchCount += 1;
+      return {
+        ok: true,
+        json: async () => ({ schemaVersion: 4, entries: [], fetchCount }),
+      };
+    },
+  });
+
+  await backend.readCatalog();
+  const refreshed = await backend.refreshCatalog();
+  assert.equal(refreshed.fetchCount, 2);
+  assert.equal(fetchCount, 2);
+  const cached = await backend.readCatalog();
+  assert.equal(cached, refreshed);
+  assert.equal(fetchCount, 2);
 });

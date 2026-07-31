@@ -57,16 +57,28 @@ import {
   DEFAULT_THEME_PRESET_ID,
   THEME_PRESETS,
   THEME_COLOR_MODES,
-  THEME_FLOOR_MODES,
   MAX_THEME_FILL_COLORS,
   normalizeThemePresetId,
   normalizeThemeSettings,
   resolveSystemThemePresetId
 } from "cadjs/lib/themeSettings";
 import {
-  CAD_DISPLAY_MODE,
-  normalizeDisplaySettings
+  CAD_EDGE_COLOR,
+  CAD_EDGE_HIGHLIGHT_COLOR,
+  DEFAULT_EXPLODED_VIEW_SETTINGS,
+  CAMERA_PROJECTION,
+  normalizeDisplayEdgeSettings,
+  normalizeDisplaySettings,
+  normalizeExplodedViewSettings
 } from "cadjs/lib/displaySettings";
+import {
+  DISPLAY_MODE_OPTIONS,
+  displayModeOptionForValue
+} from "../viewer/DisplayModeOptions";
+import {
+  OrthographicProjectionIcon,
+  PerspectiveProjectionIcon
+} from "../viewer/ProjectionModeIcons";
 import {
   buildStepClipPatch,
   clipAxisBounds,
@@ -81,12 +93,14 @@ import FileSheet, {
   FILE_SHEET_PRECISION_SLIDER_CLASSES,
   FILE_SHEET_ROW_STACK_CLASSES,
   FILE_SHEET_SEGMENTED_ITEM_CLASSES,
+  FileSheetBooleanToggle,
   FileSheetControlRow,
   FileSheetSection,
   FileSheetSliderField,
   FileSheetSubsection,
   FileSheetSubsubsection,
   FileSheetToggleRow,
+  FileSheetValueInput,
   parseFileSheetNumberInput
 } from "./FileSheet";
 
@@ -97,26 +111,22 @@ const BACKGROUND_MODE_OPTIONS = [
   { value: "transparent", label: "Transparent" }
 ];
 
-const DISPLAY_MODE_OPTIONS = [
-  { value: CAD_DISPLAY_MODE.SOLID, label: "Solid", title: "Shaded with CAD edges" },
-  { value: CAD_DISPLAY_MODE.RENDERED, label: "Rendered", title: "Shaded material appearance without edge overlay" },
-  { value: CAD_DISPLAY_MODE.TRANSPARENT, label: "X-Ray", title: "Transparent solids with visible CAD edges" },
-  { value: CAD_DISPLAY_MODE.HIDDEN_EDGES, label: "Hidden", title: "Shaded with hidden edges visible" },
-  { value: CAD_DISPLAY_MODE.HIDDEN_LINES_REMOVED, label: "Lines", title: "Visible lines with hidden lines removed" },
-  { value: CAD_DISPLAY_MODE.UNSHADED, label: "Flat", title: "Unshaded flat color" },
-  { value: CAD_DISPLAY_MODE.WIREFRAME, label: "Wire", title: "Full wireframe" }
-];
-
-const FLOOR_MODE_OPTIONS = [
-  { value: THEME_FLOOR_MODES.STAGE, label: "Stage" },
-  { value: THEME_FLOOR_MODES.GRID, label: "Grid" },
-  { value: THEME_FLOOR_MODES.NONE, label: "None" }
+const PROJECTION_MODE_OPTIONS = [
+  { value: CAMERA_PROJECTION.ORTHOGRAPHIC, label: "Orthographic", title: "Parallel projection for CAD inspection", Icon: OrthographicProjectionIcon },
+  { value: CAMERA_PROJECTION.PERSPECTIVE, label: "Perspective", title: "Depth projection with vanishing lines", Icon: PerspectiveProjectionIcon }
 ];
 
 const COLOR_MODE_OPTIONS = [
   { value: THEME_COLOR_MODES.SYSTEM, label: "System" },
   { value: THEME_COLOR_MODES.LIGHT, label: "Light" },
   { value: THEME_COLOR_MODES.DARK, label: "Dark" }
+];
+
+const EXPLODED_AXIS_OPTIONS = [
+  { value: "x", label: "X" },
+  { value: "y", label: "Y" },
+  { value: "z", label: "Z" },
+  { value: "radial", label: "Radial" }
 ];
 
 const PRIMARY_LIGHT_OPTIONS = [
@@ -132,26 +142,11 @@ const precisionSliderClasses = FILE_SHEET_PRECISION_SLIDER_CLASSES;
 const SLIDER_COMMIT_DELAY_MS = 120;
 const AXIS_OPTIONS = Object.freeze(["x", "y", "z"]);
 const EDGE_CLASS_CONTROLS = Object.freeze([
-  Object.freeze({ id: "feature", label: "Feature", defaultOpacity: 1, defaultThickness: 1.15 }),
-  Object.freeze({ id: "tangent", label: "Tangent", defaultOpacity: 0.5, defaultThickness: 1.15 }),
-  Object.freeze({ id: "seam", label: "Seam", defaultOpacity: 0.85, defaultThickness: 1.15 }),
-  Object.freeze({ id: "degenerate", label: "Degenerate", defaultOpacity: 1, defaultThickness: 0 })
+  Object.freeze({ id: "feature", label: "Feature", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 1, defaultThickness: 1.15 }),
+  Object.freeze({ id: "tangent", label: "Tangent", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 0.5, defaultThickness: 1.15 }),
+  Object.freeze({ id: "seam", label: "Seam", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 0.85, defaultThickness: 1.15 }),
+  Object.freeze({ id: "degenerate", label: "Degenerate", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 1, defaultThickness: 0 })
 ]);
-
-function normalizeEdgeAvailability(value) {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const classes = Array.isArray(value.generatedVisibilityClasses)
-    ? value.generatedVisibilityClasses
-    : Array.isArray(value.visibilityClasses)
-      ? value.visibilityClasses
-      : null;
-  if (!classes) {
-    return null;
-  }
-  return new Set(classes.map((item) => String(item || "").trim()).filter(Boolean));
-}
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -201,9 +196,14 @@ function Section({ title, value, children, ...props }) {
   );
 }
 
-function ControlSubsection({ title, children, className, hideFirstSeparator = true }) {
+function ControlSubsection({ title, trailing = null, children, className, hideFirstSeparator = true }) {
   return (
-    <FileSheetSubsection title={title} className={className} hideFirstSeparator={hideFirstSeparator}>
+    <FileSheetSubsection
+      title={title}
+      trailing={trailing}
+      className={className}
+      hideFirstSeparator={hideFirstSeparator}
+    >
       {children}
     </FileSheetSubsection>
   );
@@ -323,82 +323,112 @@ function SliderInput({ value, min, max, step = 0.01, onChange }) {
   );
 }
 
-function EdgeClassControlRow({
-  label,
-  checked,
-  available = true,
-  thickness,
-  opacity,
-  onEnabledChange,
-  onThicknessChange,
-  onOpacityChange
+function CompactNumberInput({
+  value,
+  min = 0,
+  max = 6,
+  digits = 2,
+  disabled = false,
+  ariaLabel,
+  onChange
 }) {
+  const numericValue = Number.isFinite(Number(value)) ? Number(value) : min;
+  const formattedValue = formatNumber(numericValue, digits);
+  const commitValue = (nextValue) => {
+    const resolvedValue = parseFileSheetNumberInput(nextValue, {
+      fallback: numericValue,
+      min,
+      max
+    });
+    if (Math.abs(resolvedValue - numericValue) > 1e-9) {
+      onChange?.(resolvedValue);
+    }
+  };
+
   return (
-    <NestedControlGroup
-      title={label}
-      className="py-2"
-      contentClassName="space-y-3"
-    >
-      <ThemeToggleRow
-        label="Enabled"
-        checked={checked && available}
-        onChange={onEnabledChange}
-        disabled={!available}
-        description={available ? undefined : "Not generated for this file"}
-      />
-      {checked && available ? (
-        <>
-          <SliderField label="Thickness" value={`${formatNumber(thickness, 2)} px`}>
-            <SliderInput
-              value={thickness}
-              min={0}
-              max={2}
-              step={0.05}
-              onChange={onThicknessChange}
-            />
-          </SliderField>
-          <SliderField label="Opacity" value={formatNumber(opacity)}>
-            <SliderInput
-              value={opacity}
-              min={0}
-              max={1}
-              step={0.01}
-              onChange={onOpacityChange}
-            />
-          </SliderField>
-        </>
-      ) : null}
-    </NestedControlGroup>
+    <FileSheetValueInput
+      value={formattedValue}
+      onValueCommit={commitValue}
+      disabled={disabled}
+      ariaLabel={ariaLabel}
+      inputMode="decimal"
+      className="h-full w-16 shrink-0 rounded-none border-0 bg-transparent px-1.5 py-0 text-right !text-[11px] font-medium tabular-nums shadow-none focus-visible:ring-0 dark:bg-transparent"
+    />
   );
 }
 
-function HighlightEdgeSlidersRow({
+function EdgeMetricInput({
+  label,
+  color,
+  opacity,
+  thickness,
+  min = 0,
+  max = 6,
+  digits = 2,
+  disabled = false,
+  onColorChange,
+  onOpacityChange,
+  onThicknessChange
+}) {
+  return (
+    <div
+      className={cn(
+        "inline-flex h-7 shrink-0 items-center overflow-hidden rounded-md border border-input bg-transparent shadow-xs dark:bg-input/30",
+        disabled && "opacity-50"
+      )}
+    >
+      <ColorInput
+        value={color}
+        opacity={opacity}
+        showOpacity
+        showValue={false}
+        disabled={disabled}
+        onChange={onColorChange}
+        onOpacityChange={onOpacityChange}
+        className="h-7 w-7 rounded-none border-0 border-r border-input bg-transparent px-1.5 shadow-none"
+        swatchClassName="size-3.5"
+        title={`${label} edge color`}
+        aria-label={`${label} edge color`}
+      />
+      <CompactNumberInput
+        value={thickness}
+        min={min}
+        max={max}
+        digits={digits}
+        disabled={disabled}
+        ariaLabel={`${label} edge thickness`}
+        onChange={onThicknessChange}
+      />
+      <span className="pr-1.5 text-[10px] font-medium text-muted-foreground">px</span>
+    </div>
+  );
+}
+
+function EdgeClassControlRow({
+  label,
+  color,
   thickness,
   opacity,
+  onColorChange,
   onThicknessChange,
   onOpacityChange
 }) {
   return (
-    <>
-      <SliderField label="Width" value={`${formatNumber(thickness, 1)} px`}>
-        <SliderInput
-          value={thickness}
-          min={2}
-          max={4}
-          step={0.1}
-          onChange={onThicknessChange}
+    <FileSheetControlRow
+      label={label}
+      trailing={(
+        <EdgeMetricInput
+          label={label}
+          color={color}
+          opacity={opacity}
+          thickness={thickness}
+          onColorChange={onColorChange}
+          onOpacityChange={onOpacityChange}
+          onThicknessChange={onThicknessChange}
         />
-      </SliderField>
-      <SliderField label="Opacity" value={formatNumber(opacity)}>
-        <SliderInput
-          value={opacity}
-          min={0}
-          max={1}
-          step={0.01}
-          onChange={onOpacityChange}
-        />
-      </SliderField>
-    </>
+      )}
+      contentClassName="hidden"
+    />
   );
 }
 
@@ -1207,9 +1237,7 @@ function ThemeAppearanceSection({
   updateThemeSettings,
   handleResetThemeSettings,
   handleSaveCustomThemePreset,
-  handleUpdateThemePresetSettings,
-  showEdgeSettings = true,
-  edgeAvailability = null
+  handleUpdateThemePresetSettings
 }) {
   const [saveThemeDialogOpen, setSaveThemeDialogOpen] = useState(false);
   const activeThemePreset = useMemo(
@@ -1467,6 +1495,14 @@ export function DisplaySettingsSection({
     () => normalizeStepClipSettings(normalizedDisplaySettings.clip),
     [normalizedDisplaySettings.clip]
   );
+  const normalizedExplodedSettings = useMemo(
+    () => normalizeExplodedViewSettings(normalizedDisplaySettings.exploded),
+    [normalizedDisplaySettings.exploded]
+  );
+  const normalizedEdgeSettings = useMemo(
+    () => normalizeDisplayEdgeSettings(normalizedDisplaySettings.edges),
+    [normalizedDisplaySettings.edges]
+  );
   const setDisplay = (patch) => {
     updateDisplaySettings?.((current) => ({
       ...normalizeDisplaySettings(current),
@@ -1482,6 +1518,50 @@ export function DisplaySettingsSection({
       };
     });
   };
+  const setExploded = (patch) => {
+    updateDisplaySettings?.((current) => {
+      const currentSettings = normalizeDisplaySettings(current);
+      return {
+        ...currentSettings,
+        exploded: normalizeExplodedViewSettings({ ...currentSettings.exploded, ...patch })
+      };
+    });
+  };
+  const setEdges = (patch) => {
+    updateDisplaySettings?.((current) => {
+      const currentSettings = normalizeDisplaySettings(current);
+      return {
+        ...currentSettings,
+        edges: normalizeDisplayEdgeSettings({
+          ...currentSettings.edges,
+          ...patch
+        })
+      };
+    });
+  };
+  const setEdgeClass = (classId, patch) => {
+    updateDisplaySettings?.((current) => {
+      const currentSettings = normalizeDisplaySettings(current);
+      return {
+        ...currentSettings,
+        edges: normalizeDisplayEdgeSettings({
+          ...currentSettings.edges,
+          classes: {
+            ...(currentSettings.edges?.classes || {}),
+            [classId]: {
+              ...(currentSettings.edges?.classes?.[classId] || {}),
+              ...patch
+            }
+          }
+        })
+      };
+    });
+  };
+  const resetEdges = () => {
+    setDisplay({ edges: normalizeDisplayEdgeSettings() });
+  };
+  const selectedDisplayModeOption = displayModeOptionForValue(normalizedDisplaySettings.mode);
+  const SelectedDisplayModeIcon = selectedDisplayModeOption?.Icon || null;
   const updateClipAxisOffset = (axis, nextOffset) => {
     const numericOffset = Number(nextOffset);
     const resolvedOffset = Number.isFinite(numericOffset) ? numericOffset : 0;
@@ -1495,23 +1575,200 @@ export function DisplaySettingsSection({
 
   return (
     <Section title="Display" value="display">
-      <Field label="Mode">
-        <Select
-          value={normalizedDisplaySettings.mode}
-          onValueChange={(nextValue) => setDisplay({ mode: nextValue })}
-        >
-          <SelectTrigger size="sm" className="h-7 !text-[11px]" aria-label="Display mode">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {DISPLAY_MODE_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value} className="text-xs" title={option.title}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
+      <ControlSubsection title="Mode">
+        <Field label="Projection">
+          <SegmentedControl
+            value={normalizedDisplaySettings.projection}
+            onChange={(nextValue) => setDisplay({ projection: nextValue })}
+            options={PROJECTION_MODE_OPTIONS}
+          />
+        </Field>
+
+        <Field label="Style">
+          <Select
+            value={normalizedDisplaySettings.mode}
+            onValueChange={(nextValue) => setDisplay({ mode: nextValue })}
+          >
+            <SelectTrigger size="sm" className="h-7 !text-[11px]" aria-label="Display mode">
+              <span className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                {SelectedDisplayModeIcon ? (
+                  <SelectedDisplayModeIcon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
+                ) : null}
+                <SelectValue />
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {DISPLAY_MODE_OPTIONS.map((option) => {
+                const Icon = option.Icon;
+                return (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="text-xs"
+                    title={option.title}
+                    icon={Icon ? <Icon className="size-3.5" strokeWidth={2} /> : null}
+                  >
+                    {option.label}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </Field>
+      </ControlSubsection>
+
+      <ControlSubsection title="Edges">
+        {EDGE_CLASS_CONTROLS.map((edgeClass) => {
+          const settings = normalizedEdgeSettings.classes?.[edgeClass.id] || {};
+          const color = settings.color || edgeClass.defaultColor;
+          const thickness = settings.thickness ?? edgeClass.defaultThickness;
+          const opacity = settings.opacity ?? edgeClass.defaultOpacity;
+          return (
+            <EdgeClassControlRow
+              key={edgeClass.id}
+              label={edgeClass.label}
+              color={color}
+              thickness={thickness}
+              opacity={opacity}
+              onColorChange={(nextValue) => setEdgeClass(edgeClass.id, { color: nextValue })}
+              onThicknessChange={(nextValue) => setEdgeClass(edgeClass.id, { thickness: nextValue })}
+              onOpacityChange={(nextValue) => setEdgeClass(edgeClass.id, { opacity: nextValue })}
+            />
+          );
+        })}
+
+        <FileSheetControlRow
+          label="Highlight"
+          trailing={(
+            <EdgeMetricInput
+              label="Highlight"
+              color={normalizedEdgeSettings.highlightColor || CAD_EDGE_HIGHLIGHT_COLOR}
+              opacity={normalizedEdgeSettings.highlightOpacity ?? 1}
+              thickness={normalizedEdgeSettings.highlightThickness ?? 3}
+              min={0.5}
+              max={6}
+              digits={1}
+              onColorChange={(nextValue) => setEdges({ highlightColor: nextValue })}
+              onOpacityChange={(nextValue) => setEdges({ highlightOpacity: nextValue })}
+              onThicknessChange={(nextValue) => setEdges({ highlightThickness: nextValue })}
+            />
+          )}
+          contentClassName="hidden"
+        />
+
+        <FileSheetControlRow>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={compactButtonClasses}
+            onClick={resetEdges}
+            title="Reset edge display"
+          >
+            <RotateCcw className="h-3 w-3" strokeWidth={2} aria-hidden="true" />
+            <span>Reset</span>
+          </Button>
+        </FileSheetControlRow>
+      </ControlSubsection>
+
+      <ControlSubsection title="Exploded View">
+        <FileSheetToggleRow
+          label="Enabled"
+          checked={normalizedExplodedSettings.enabled}
+          onCheckedChange={(checked) => setExploded({ enabled: checked })}
+        />
+
+        {normalizedExplodedSettings.enabled ? (
+          <>
+            <Field label="Axis">
+              <SegmentedControl
+                value={normalizedExplodedSettings.axis}
+                options={EXPLODED_AXIS_OPTIONS}
+                onChange={(nextValue) => setExploded({ axis: nextValue })}
+              />
+            </Field>
+
+            <FileSheetSliderField
+              label="Spacing"
+              value={`${normalizedExplodedSettings.spacing.toFixed(2)}x`}
+              onValueCommit={(nextValue) => {
+                setExploded({
+                  spacing: parseFileSheetNumberInput(nextValue, {
+                    fallback: normalizedExplodedSettings.spacing,
+                    min: 0.25,
+                    max: 4
+                  })
+                });
+              }}
+            >
+              <Slider
+                className={precisionSliderClasses}
+                value={[normalizedExplodedSettings.spacing]}
+                min={0.25}
+                max={4}
+                step={0.05}
+                onValueChange={(value) => {
+                  setExploded({ spacing: Array.isArray(value) ? value[0] : value });
+                }}
+                aria-label="Exploded spacing"
+              />
+            </FileSheetSliderField>
+
+            <FileSheetSliderField
+              label="Depth"
+              value={`${normalizedExplodedSettings.depth}`}
+              onValueCommit={(nextValue) => {
+                setExploded({
+                  depth: parseFileSheetNumberInput(nextValue, {
+                    fallback: normalizedExplodedSettings.depth,
+                    min: 1,
+                    max: 8,
+                    integer: true
+                  })
+                });
+              }}
+            >
+              <Slider
+                className={precisionSliderClasses}
+                value={[normalizedExplodedSettings.depth]}
+                min={1}
+                max={8}
+                step={1}
+                onValueChange={(value) => {
+                  setExploded({ depth: Array.isArray(value) ? value[0] : value });
+                }}
+                aria-label="Exploded depth"
+              />
+            </FileSheetSliderField>
+
+            <FileSheetToggleRow
+              label="Merge levels"
+              checked={normalizedExplodedSettings.mergeCoplanar}
+              onCheckedChange={(checked) => setExploded({ mergeCoplanar: checked })}
+            />
+
+            <FileSheetToggleRow
+              label="Ground base"
+              checked={normalizedExplodedSettings.keepBaseGrounded}
+              onCheckedChange={(checked) => setExploded({ keepBaseGrounded: checked })}
+            />
+
+            <FileSheetControlRow>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className={compactButtonClasses}
+                onClick={() => setExploded(DEFAULT_EXPLODED_VIEW_SETTINGS)}
+                title="Reset exploded view"
+              >
+                <RotateCcw className="h-3 w-3" strokeWidth={2} aria-hidden="true" />
+                <span>Reset</span>
+              </Button>
+            </FileSheetControlRow>
+          </>
+        ) : null}
+      </ControlSubsection>
 
       {showClip ? (
         <ControlSubsection title="Clip" hideFirstSeparator={false}>
@@ -1612,9 +1869,7 @@ export function ThemeSettingsSections({
   updateThemeSettings,
   handleResetThemeSettings,
   handleSaveCustomThemePreset,
-  handleUpdateThemePresetSettings,
-  showEdgeSettings = true,
-  edgeAvailability = null
+  handleUpdateThemePresetSettings
 }) {
   const [activePrimaryLight, setActivePrimaryLight] = useState("directional");
   const activeThemePreset = useMemo(
@@ -1622,8 +1877,6 @@ export function ThemeSettingsSections({
     [themePresets, themePresetId, themeSettings]
   );
   const themeHasChanged = themeSettingsChangedFromPreset(activeThemePreset, themeSettings);
-  const showEdgeDetailControls = showEdgeSettings && themeSettings.edges.enabled;
-  const availableEdgeClassSet = useMemo(() => normalizeEdgeAvailability(edgeAvailability), [edgeAvailability]);
   const appearanceTitle = (
     <span className="flex min-w-0 items-center gap-2">
       <span>Appearance</span>
@@ -1660,31 +1913,20 @@ export function ThemeSettingsSections({
       }
     }));
   };
-
-  const setEdges = (patch) => {
-    updateThemeSettings((current) => ({
-      ...current,
-      edges: {
-        ...current.edges,
-        ...patch
-      }
-    }));
-  };
-
-  const setEdgeClass = (classId, patch) => {
-    updateThemeSettings((current) => ({
-      ...current,
-      edges: {
-        ...current.edges,
-        classes: {
-          ...(current.edges?.classes || {}),
-          [classId]: {
-            ...(current.edges?.classes?.[classId] || {}),
+  const setFloorGrid = (patch) => {
+    updateThemeSettings((current) => {
+      const currentFloor = current.floor || {};
+      return {
+        ...current,
+        floor: {
+          ...currentFloor,
+          grid: {
+            ...(currentFloor.grid || {}),
             ...patch
           }
         }
-      }
-    }));
+      };
+    });
   };
 
   const setEnvironment = (patch) => {
@@ -1831,69 +2073,6 @@ export function ThemeSettingsSections({
         </SliderField>
       </ControlSubsection>
 
-      {showEdgeSettings ? (
-        <ControlSubsection title="Edges">
-          <ThemeToggleRow
-            label="Show edges"
-            checked={themeSettings.edges.enabled}
-            onChange={(nextValue) => setEdges({ enabled: nextValue })}
-          />
-
-          {showEdgeDetailControls ? (
-            <>
-              <ColorModeField
-                label="Edge color"
-                path={["edges", "color"]}
-                {...themeColorFieldProps}
-              />
-              <div className="space-y-1">
-                {EDGE_CLASS_CONTROLS.map((edgeClass) => {
-                  const settings = themeSettings.edges.classes?.[edgeClass.id] || {};
-                  const thickness = settings.thickness ?? edgeClass.defaultThickness;
-                  const opacity = settings.opacity ?? edgeClass.defaultOpacity;
-                  const available = !availableEdgeClassSet || availableEdgeClassSet.has(edgeClass.id);
-                  const checked = available && thickness > 0 && opacity > 0;
-                  return (
-                    <EdgeClassControlRow
-                      key={edgeClass.id}
-                      label={edgeClass.label}
-                      checked={checked}
-                      available={available}
-                      thickness={thickness}
-                      opacity={opacity}
-                      onEnabledChange={(nextValue) => setEdgeClass(edgeClass.id, nextValue
-                        ? {
-                            thickness: thickness > 0 ? thickness : edgeClass.defaultThickness,
-                            opacity: opacity > 0 ? opacity : edgeClass.defaultOpacity
-                          }
-                        : { thickness: 0 })}
-                      onThicknessChange={(nextValue) => setEdgeClass(edgeClass.id, { thickness: nextValue })}
-                      onOpacityChange={(nextValue) => setEdgeClass(edgeClass.id, { opacity: nextValue })}
-                    />
-                  );
-                })}
-              </div>
-            </>
-          ) : null}
-        </ControlSubsection>
-      ) : null}
-
-      {showEdgeDetailControls ? (
-        <ControlSubsection title="Highlight">
-          <ColorField
-            label="Color"
-            value={themeSettings.edges.highlightColor || "#8dc5ff"}
-            onChange={(nextValue) => setEdges({ highlightColor: nextValue })}
-          />
-          <HighlightEdgeSlidersRow
-            thickness={themeSettings.edges.highlightThickness ?? 3}
-            opacity={themeSettings.edges.highlightOpacity ?? 1}
-            onThicknessChange={(nextValue) => setEdges({ highlightThickness: nextValue })}
-            onOpacityChange={(nextValue) => setEdges({ highlightOpacity: nextValue })}
-          />
-        </ControlSubsection>
-      ) : null}
-
       <ControlSubsection title="Backdrop">
         <Field label="Style">
           <SegmentedControl
@@ -1951,15 +2130,17 @@ export function ThemeSettingsSections({
         ) : null}
       </ControlSubsection>
 
-      <ControlSubsection title="Floor">
-        <Field label="Mode">
-          <SegmentedControl
-            value={themeSettings.floor?.mode || THEME_FLOOR_MODES.STAGE}
-            onChange={(nextValue) => setFloor({ mode: nextValue })}
-            options={FLOOR_MODE_OPTIONS}
+      <ControlSubsection
+        title="Floor"
+        trailing={(
+          <FileSheetBooleanToggle
+            checked={themeSettings.floor?.enabled === true}
+            onCheckedChange={(nextValue) => setFloor({ enabled: nextValue })}
+            ariaLabel="Enable floor"
           />
-        </Field>
-        {(themeSettings.floor?.mode || THEME_FLOOR_MODES.STAGE) === THEME_FLOOR_MODES.STAGE ? (
+        )}
+      >
+        {themeSettings.floor?.enabled === true ? (
           <>
             <ColorModeField
               label="Color"
@@ -2004,34 +2185,51 @@ export function ThemeSettingsSections({
             </SliderField>
           </>
         ) : null}
-        {(themeSettings.floor?.mode || THEME_FLOOR_MODES.STAGE) === THEME_FLOOR_MODES.GRID ? (
+      </ControlSubsection>
+
+      <ControlSubsection
+        title="Grid"
+        trailing={(
+          <FileSheetBooleanToggle
+            checked={themeSettings.floor?.grid?.enabled === true}
+            onCheckedChange={(nextValue) => setFloorGrid({ enabled: nextValue })}
+            ariaLabel="Enable grid"
+          />
+        )}
+      >
+        {themeSettings.floor?.grid?.enabled === true ? (
           <>
             <ColorModeField
+              label="Floor color"
+              path={["floor", "color"]}
+              {...themeColorFieldProps}
+            />
+            <ColorModeField
               label="Center line"
-              path={["floor", "gridCenterColor"]}
+              path={["floor", "grid", "centerColor"]}
               {...themeColorFieldProps}
             />
             <ColorModeField
               label="Cell line"
-              path={["floor", "gridCellColor"]}
+              path={["floor", "grid", "cellColor"]}
               {...themeColorFieldProps}
             />
-            <SliderField label="Line opacity" value={formatNumber(themeSettings.floor?.gridOpacity ?? 0.18)}>
+            <SliderField label="Line opacity" value={formatNumber(themeSettings.floor?.grid?.opacity ?? 0.18)}>
               <SliderInput
-                value={themeSettings.floor?.gridOpacity ?? 0.18}
+                value={themeSettings.floor?.grid?.opacity ?? 0.18}
                 min={0}
                 max={1}
                 step={0.01}
-                onChange={(nextValue) => setFloor({ gridOpacity: nextValue })}
+                onChange={(nextValue) => setFloorGrid({ opacity: nextValue })}
               />
             </SliderField>
-            <SliderField label="Density" value={formatNumber(themeSettings.floor?.gridDensity ?? 1)}>
+            <SliderField label="Density" value={formatNumber(themeSettings.floor?.grid?.density ?? 1)}>
               <SliderInput
-                value={themeSettings.floor?.gridDensity ?? 1}
+                value={themeSettings.floor?.grid?.density ?? 1}
                 min={0.25}
                 max={4}
                 step={0.05}
-                onChange={(nextValue) => setFloor({ gridDensity: nextValue })}
+                onChange={(nextValue) => setFloorGrid({ density: nextValue })}
               />
             </SliderField>
           </>
@@ -2213,8 +2411,7 @@ export default function ThemeSettingsPopover({
   updateThemeSettings,
   handleResetThemeSettings,
   handleSaveCustomThemePreset,
-  handleUpdateThemePresetSettings,
-  showEdgeSettings = true
+  handleUpdateThemePresetSettings
 }) {
   return (
     <FileSheet
@@ -2234,8 +2431,6 @@ export default function ThemeSettingsPopover({
           handleResetThemeSettings={handleResetThemeSettings}
           handleSaveCustomThemePreset={handleSaveCustomThemePreset}
           handleUpdateThemePresetSettings={handleUpdateThemePresetSettings}
-          showEdgeSettings={showEdgeSettings}
-          edgeAvailability={edgeAvailability}
         />
       </Accordion>
     </FileSheet>

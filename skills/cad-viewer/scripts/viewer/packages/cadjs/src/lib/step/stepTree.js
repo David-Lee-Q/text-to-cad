@@ -24,6 +24,10 @@ function basename(value) {
   return normalized.split(/[\\/]/).filter(Boolean).pop() || normalized;
 }
 
+function componentLabelFromPartLabel(value) {
+  return normalizeString(value).replace(/\.(?:step|stp)$/i, "") || "STEP part";
+}
+
 export function stepTreeNodeId(node) {
   return normalizeString(node?.id || node?.occurrenceId);
 }
@@ -275,6 +279,24 @@ function buildSyntheticOccurrenceNode({ partId, occurrenceId, children }) {
   };
 }
 
+function buildTopologyFolderNode({ partNode, partId, children }) {
+  const label = componentLabelFromPartLabel(stepTreeNodeLabel(partNode));
+  return {
+    id: topologyNodeId(partId, "folder", "faces-edges"),
+    nodeType: "topology-folder",
+    displayName: label,
+    name: label,
+    detail: "",
+    topologyReferenceId: "",
+    displaySelector: "",
+    partId,
+    selectionPartId: partId,
+    leafPartIds: [STEP_MODEL_RENDER_PART_ID],
+    visualOnly: true,
+    children
+  };
+}
+
 function topologySelectorAliases(value) {
   const normalizedValue = normalizeString(value);
   if (!normalizedValue) {
@@ -343,11 +365,27 @@ function flattenRedundantTopologyOccurrenceNodes(partNode, topologyChildren) {
   ));
 }
 
+function maybeWrapSinglePartTopologyFolder(partNode, topologyChildren) {
+  const children = Array.isArray(topologyChildren) ? topologyChildren : [];
+  if (
+    !children.length ||
+    normalizeString(partNode?.nodeType) !== "part" ||
+    stepTreeNodeId(partNode) !== STEP_MODEL_ROOT_ID
+  ) {
+    return children;
+  }
+  return [buildTopologyFolderNode({
+    partNode,
+    partId: STEP_MODEL_ROOT_ID,
+    children
+  })];
+}
+
 function topologyReferencePartId(reference, fallbackPartId) {
   return normalizeString(reference?.partId) || normalizeString(fallbackPartId);
 }
 
-function addStepTreeTopologyPartTarget(targets, seenTargets, partId, occurrenceId) {
+function addStepTreeTopologyPartTarget(targets, seenTargets, partId, occurrenceId, priority = 0) {
   const normalizedPartId = normalizeString(partId);
   const normalizedOccurrenceId = normalizeString(occurrenceId);
   if (!normalizedPartId || !normalizedOccurrenceId) {
@@ -360,7 +398,8 @@ function addStepTreeTopologyPartTarget(targets, seenTargets, partId, occurrenceI
   seenTargets.add(key);
   targets.push({
     partId: normalizedPartId,
-    occurrenceId: normalizedOccurrenceId
+    occurrenceId: normalizedOccurrenceId,
+    priority: Number.isFinite(Number(priority)) ? Number(priority) : 0
   });
 }
 
@@ -385,16 +424,19 @@ function collectStepTreeTopologyPartTargets(root) {
       continue;
     }
 
-    addStepTreeTopologyPartTarget(targets, seenTargets, partId, partId);
-    addStepTreeTopologyPartTarget(targets, seenTargets, partId, node?.occurrenceId);
-    addStepTreeTopologyPartTarget(targets, seenTargets, partId, node?.sourceOccurrenceId);
-    addStepTreeTopologyPartTarget(targets, seenTargets, partId, node?.sourceRootTargetOccurrenceId);
+    addStepTreeTopologyPartTarget(targets, seenTargets, partId, partId, 0);
+    addStepTreeTopologyPartTarget(targets, seenTargets, partId, node?.occurrenceId, 0);
     for (const leafPartId of stepTreeNodeLeafPartIds(node)) {
-      addStepTreeTopologyPartTarget(targets, seenTargets, partId, leafPartId);
+      addStepTreeTopologyPartTarget(targets, seenTargets, partId, leafPartId, 1);
     }
+    addStepTreeTopologyPartTarget(targets, seenTargets, partId, node?.sourceOccurrenceId, 2);
+    addStepTreeTopologyPartTarget(targets, seenTargets, partId, node?.sourceRootTargetOccurrenceId, 2);
   }
 
-  return targets.sort((a, b) => b.occurrenceId.length - a.occurrenceId.length);
+  return targets.sort((a, b) => (
+    b.occurrenceId.length - a.occurrenceId.length ||
+    a.priority - b.priority
+  ));
 }
 
 function occurrenceMatchesStepTreePartTarget(occurrenceId, targetOccurrenceId) {
@@ -518,10 +560,22 @@ function buildTopologyChildrenByPart(references, fallbackPartId) {
   }));
 }
 
-export function buildStepTreeRootWithTopology({ root = null, references = [], fallbackPartId = "" } = {}) {
+export function buildStepTreeRootWithTopology({
+  root = null,
+  references = [],
+  fallbackPartId = "",
+  topologyPartIds = null
+} = {}) {
   if (!root || typeof root !== "object") {
     return root;
   }
+  const topologyPartIdSet = topologyPartIds == null
+    ? null
+    : new Set(
+        (Array.isArray(topologyPartIds) ? topologyPartIds : [topologyPartIds])
+          .map((id) => normalizeString(id))
+          .filter(Boolean)
+      );
   const topologyChildrenByPart = buildTopologyChildrenByPart(references, fallbackPartId || stepTreeNodeId(root));
   if (!topologyChildrenByPart.size) {
     return root;
@@ -530,8 +584,12 @@ export function buildStepTreeRootWithTopology({ root = null, references = [], fa
   function cloneWithTopology(node) {
     const id = stepTreeNodeId(node);
     const children = stepTreeNodeChildren(node).map((child) => cloneWithTopology(child));
-    const topologyChildren = normalizeString(node?.nodeType) === "part"
-      ? flattenRedundantTopologyOccurrenceNodes(node, topologyChildrenByPart.get(id) || [])
+    const topologyLoaded = !topologyPartIdSet || topologyPartIdSet.has(id);
+    const topologyChildren = topologyLoaded && normalizeString(node?.nodeType) === "part"
+      ? maybeWrapSinglePartTopologyFolder(
+          node,
+          flattenRedundantTopologyOccurrenceNodes(node, topologyChildrenByPart.get(id) || [])
+        )
       : [];
     if (!children.length && !topologyChildren.length) {
       return node;

@@ -43,6 +43,10 @@ import {
   buildViewerStartupJson,
   listenWithPortFallback,
 } from "./serverListen.mjs";
+import {
+  createRequestPipeline,
+  installProcessErrorGuards,
+} from "./requestPipeline.mjs";
 
 const serverModuleDir = path.dirname(fileURLToPath(import.meta.url));
 const viewerAppRoot = path.basename(path.dirname(serverModuleDir)) === "src"
@@ -180,17 +184,12 @@ const middlewares = [
   serveDistAsset({ distRoot }),
 ];
 
-function runMiddleware(index, req, res) {
-  const middleware = middlewares[index];
-  if (!middleware) {
-    res.statusCode = 404;
-    res.end("Not found");
-    return;
-  }
-  middleware(req, res, () => runMiddleware(index + 1, req, res));
-}
+const requestPipeline = createRequestPipeline({ middlewares });
+installProcessErrorGuards({
+  describeContext: () => requestPipeline.describeInFlightRequests(),
+});
 
-const server = http.createServer((req, res) => runMiddleware(0, req, res));
+const server = http.createServer(requestPipeline.handleRequest);
 
 try {
   port = await listenWithPortFallback({

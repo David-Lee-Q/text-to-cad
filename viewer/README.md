@@ -90,7 +90,9 @@ review links.
 - `src/client/ui/`: viewer-owned browser utilities such as clipboard, color
   scheme, class merging, and DOM helpers.
 - `src/server/`: local and hosted backend adapters, HTTP middleware, and the
-  local production server.
+  local production server. `src/server/requestPipeline.mjs` runs the middleware
+  chain and contains handler failures: an unexpected throw or rejection becomes
+  a 500 instead of killing the server process.
 - `api/cad/`: Vercel serverless shims for `/__cad/*` routes.
 - `scripts/`: developer and runtime launchers, plus the test runner.
 - `docs/`: workflow reference docs for backend storage, browser persistence,

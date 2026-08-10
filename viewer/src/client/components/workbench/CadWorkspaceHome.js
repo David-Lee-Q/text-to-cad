@@ -221,22 +221,28 @@ export default function CadWorkspaceHome({
   const hasDirectoryOptions = normalizedDirectoryOptions.length > 0;
   const catalogErrorMessage = String(catalogError || "").trim();
   const catalogLoading = !catalogHydrated || (catalogRefreshing && !hasEntries);
+  const heading = directorySelectionActive
+    ? t("selectADirectory")
+    : t("selectAFile");
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 flex min-w-0 items-center justify-center px-4 py-6">
+    <div className="pointer-events-none absolute inset-0 z-20 flex min-w-0 flex-col items-center justify-center gap-5 px-4 py-6">
+      <div className="pointer-events-auto flex flex-col items-center gap-1.5 text-center">
+        <h1 className="text-3xl font-bold leading-8 tracking-tight text-foreground sm:text-4xl">
+          COSMO AI CAD
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {t("homeTagline")}
+        </p>
+      </div>
       <section
         className="cad-glass-popover pointer-events-auto w-full max-w-2xl overflow-hidden rounded-md border border-sidebar-border text-popover-foreground shadow-xl shadow-black/10"
         aria-label={t("homeAria")}
       >
         <div className="flex items-center justify-between gap-3 border-b border-sidebar-border px-5 py-4 sm:px-6">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="text-2xl font-bold leading-7 tracking-tight text-foreground sm:text-3xl">
-              COSMO AI CAD
-            </h1>
-            <p className="truncate text-xs text-muted-foreground sm:text-sm">
-              {t("homeTagline")}
-            </p>
-          </div>
+          <h1 className="text-lg font-medium leading-6 text-foreground sm:text-xl">
+            {heading}
+          </h1>
           {!directorySelectionActive ? (
             <div className="flex shrink-0 items-center gap-2">
               <div className="flex items-center gap-1.5">

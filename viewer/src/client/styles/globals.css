@@ -559,6 +559,26 @@
     background: color-mix(in srgb, var(--destructive) 8%, var(--card));
   }
 
+  .help-figure {
+    margin: 16px 0;
+  }
+
+  .help-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.08);
+  }
+
+  .help-figcaption {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted-foreground);
+    text-align: center;
+  }
+
   @media (max-width: 768px) {
     .help-layout {
       flex-direction: column;

@@ -30,7 +30,8 @@ const HELP_DOCUMENT = {
                   "Right panel — format-specific file sheets with metadata, parameters, and issues."
                 ]
               },
-              { type: "p", text: "A floating toolbar and drawing toolbar overlay the viewport for view navigation and annotations." }
+              { type: "p", text: "A floating toolbar and drawing toolbar overlay the viewport for view navigation and annotations." },
+              { type: "image", src: "/help-screenshots/01-home.png", alt: "CAD Viewer home screen with file browser and quick entries" }
             ]
           },
           {
@@ -59,7 +60,8 @@ const HELP_DOCUMENT = {
             title: "View Navigation",
             blocks: [
               { type: "p", text: "Orbit, pan, and zoom the camera with the mouse or touch gestures. Use the zoom controls in the corner or the floating toolbar to fit the model to the view and reset zoom." },
-              { type: "p", text: "The view-plane indicator shows the current camera orientation in the x/y/z axes." }
+              { type: "p", text: "The view-plane indicator shows the current camera orientation in the x/y/z axes." },
+              { type: "image", src: "/help-screenshots/02-step-viewer.png", alt: "STEP assembly rendered in the 3D viewport" }
             ]
           },
           {
@@ -104,7 +106,8 @@ const HELP_DOCUMENT = {
                   "Copy a reference to a part or load its child nodes.",
                   "Play part-level animations and adjust speed and time."
                 ]
-              }
+              },
+              { type: "image", src: "/help-screenshots/03-step-sheet.png", alt: "STEP file sheet with assembly tree and parameters" }
             ]
           },
           {
@@ -112,13 +115,15 @@ const HELP_DOCUMENT = {
             blocks: [
               { type: "p", text: "Robot files expose joint controls with sliders. Set joint angles, copy values or angles, and reset the pose to the stored defaults." },
               { type: "p", text: "Pose groups store named positions. Solve Inverse Kinematics to move the end effector to a target pose, or plan a motion to the pose." },
-              { type: "p", text: "SDF files also show simulator metadata: includes, plugins, sensors, lights, and physics. SRDF files expose MoveIt planning groups and joints." }
+              { type: "p", text: "SDF files also show simulator metadata: includes, plugins, sensors, lights, and physics. SRDF files expose MoveIt planning groups and joints." },
+              { type: "image", src: "/help-screenshots/04-robot.png", alt: "Robot file sheet with joint controls" }
             ]
           },
           {
             title: "DXF Drawing",
             blocks: [
-              { type: "p", text: "The DXF sheet toggles between 2D and 3D view modes. In 3D mode you can adjust the bend direction, bend angle, and preview thickness for flat-pattern review." }
+              { type: "p", text: "The DXF sheet toggles between 2D and 3D view modes. In 3D mode you can adjust the bend direction, bend angle, and preview thickness for flat-pattern review." },
+              { type: "image", src: "/help-screenshots/07-dxf.png", alt: "DXF drawing sheet" }
             ]
           },
           {
@@ -133,13 +138,15 @@ const HELP_DOCUMENT = {
                   "Play parameter animations and set speed from 0.1x to 3x.",
                   "Change the graphics scale from the graphics settings section."
                 ]
-              }
+              },
+              { type: "image", src: "/help-screenshots/06-implicit.png", alt: "Implicit CAD file sheet with parameter controls" }
             ]
           },
           {
             title: "G-code Toolpath",
             blocks: [
-              { type: "p", text: "The G-code sheet controls preview detail with a slider. Increase the level for a denser toolpath preview, or lower it for faster interaction on large files." }
+              { type: "p", text: "The G-code sheet controls preview detail with a slider. Increase the level for a denser toolpath preview, or lower it for faster interaction on large files." },
+              { type: "image", src: "/help-screenshots/05-gcode.png", alt: "G-code toolpath preview" }
             ]
           },
           {
@@ -180,7 +187,8 @@ const HELP_DOCUMENT = {
           {
             title: "Theme Presets",
             blocks: [
-              { type: "p", text: "Choose a built-in preset from the preset menu, or save the current settings as a custom preset. Delete, reset, or restore defaults from the same menu." }
+              { type: "p", text: "Choose a built-in preset from the preset menu, or save the current settings as a custom preset. Delete, reset, or restore defaults from the same menu." },
+              { type: "image", src: "/help-screenshots/08-theme.png", alt: "Theme settings popover" }
             ]
           },
           {
@@ -233,7 +241,8 @@ const HELP_DOCUMENT = {
         title: "Updates and Support",
         blocks: [
           { type: "callout", kind: "tip", text: "The version label in the top bar shows the installed version. If a newer release is available you will see an update prompt with the install command." },
-          { type: "p", text: "Join the community Discord or open the GitHub repository from the top bar links to report issues, ask questions, and follow development." }
+          { type: "p", text: "Join the community Discord or open the GitHub repository from the top bar links to report issues, ask questions, and follow development." },
+          { type: "image", src: "/help-screenshots/09-help.png", alt: "The help documentation page" }
         ]
       }
     ]
@@ -260,7 +269,8 @@ const HELP_DOCUMENT = {
                   "右侧面板——按格式区分的文件面板，展示元数据、参数与问题。"
                 ]
               },
-              { type: "p", text: "悬浮工具栏与绘图工具栏覆盖在视口上，用于视图导航与标注。" }
+              { type: "p", text: "悬浮工具栏与绘图工具栏覆盖在视口上，用于视图导航与标注。" },
+              { type: "image", src: "/help-screenshots/01-home.png", alt: "CAD Viewer 首页，包含文件浏览器与快捷入口" }
             ]
           },
           {
@@ -289,7 +299,8 @@ const HELP_DOCUMENT = {
             title: "视图导航",
             blocks: [
               { type: "p", text: "使用鼠标或触控手势旋转、平移、缩放相机。使用角落的缩放控件或悬浮工具栏将模型适配到视图并重置缩放。" },
-              { type: "p", text: "视图平面指示器以 x/y/z 轴显示当前相机朝向。" }
+              { type: "p", text: "视图平面指示器以 x/y/z 轴显示当前相机朝向。" },
+              { type: "image", src: "/help-screenshots/02-step-viewer.png", alt: "3D 视口中渲染的 STEP 装配体" }
             ]
           },
           {
@@ -334,7 +345,8 @@ const HELP_DOCUMENT = {
                   "复制零件的引用或加载其子节点。",
                   "播放零件级动画并调整速度与时间。"
                 ]
-              }
+              },
+              { type: "image", src: "/help-screenshots/03-step-sheet.png", alt: "STEP 文件面板：装配树与参数" }
             ]
           },
           {
@@ -342,13 +354,15 @@ const HELP_DOCUMENT = {
             blocks: [
               { type: "p", text: "机器人文件通过滑杆提供关节控制。设置关节角度、复制数值或角度，并可重置到存储的默认姿态。" },
               { type: "p", text: "位置组保存命名位置。可求解逆运动学将末端执行器移动到目标位姿，或规划到该位姿的运动。" },
-              { type: "p", text: "SDF 文件还展示仿真元数据：includes、plugins、sensors、lights 与 physics。SRDF 文件展示 MoveIt 规划组与关节。" }
+              { type: "p", text: "SDF 文件还展示仿真元数据：includes、plugins、sensors、lights 与 physics。SRDF 文件展示 MoveIt 规划组与关节。" },
+              { type: "image", src: "/help-screenshots/04-robot.png", alt: "机器人文件面板：关节控制" }
             ]
           },
           {
             title: "DXF 图纸",
             blocks: [
-              { type: "p", text: "DXF 面板可在 2D 与 3D 视图模式间切换。3D 模式下可调整折弯方向、折弯角度与预览厚度，用于展开图审查。" }
+              { type: "p", text: "DXF 面板可在 2D 与 3D 视图模式间切换。3D 模式下可调整折弯方向、折弯角度与预览厚度，用于展开图审查。" },
+              { type: "image", src: "/help-screenshots/07-dxf.png", alt: "DXF 图纸文件面板" }
             ]
           },
           {
@@ -363,13 +377,15 @@ const HELP_DOCUMENT = {
                   "播放参数动画并设置 0.1x 至 3x 的速度。",
                   "在图形设置区更改整体比例。"
                 ]
-              }
+              },
+              { type: "image", src: "/help-screenshots/06-implicit.png", alt: "隐式 CAD 文件面板：参数控制" }
             ]
           },
           {
             title: "G-code 刀路",
             blocks: [
-              { type: "p", text: "G-code 面板通过滑杆控制预览细节等级。提高等级可获得更密集的刀路预览，大文件时可降低等级以加快交互。" }
+              { type: "p", text: "G-code 面板通过滑杆控制预览细节等级。提高等级可获得更密集的刀路预览，大文件时可降低等级以加快交互。" },
+              { type: "image", src: "/help-screenshots/05-gcode.png", alt: "G-code 刀路预览" }
             ]
           },
           {
@@ -410,7 +426,8 @@ const HELP_DOCUMENT = {
           {
             title: "主题预设",
             blocks: [
-              { type: "p", text: "从预设菜单选择内置预设，或将当前设置保存为自定义预设。同一菜单中可删除、重置或恢复默认。" }
+              { type: "p", text: "从预设菜单选择内置预设，或将当前设置保存为自定义预设。同一菜单中可删除、重置或恢复默认。" },
+              { type: "image", src: "/help-screenshots/08-theme.png", alt: "主题设置弹出面板" }
             ]
           },
           {
@@ -463,7 +480,8 @@ const HELP_DOCUMENT = {
         title: "更新与支持",
         blocks: [
           { type: "callout", kind: "tip", text: "顶部栏的版本号显示已安装版本。若有新版本可用，将出现带安装命令的更新提示。" },
-          { type: "p", text: "通过顶部栏链接加入社区 Discord 或打开 GitHub 仓库，可反馈问题、提问并跟进开发。" }
+          { type: "p", text: "通过顶部栏链接加入社区 Discord 或打开 GitHub 仓库，可反馈问题、提问并跟进开发。" },
+          { type: "image", src: "/help-screenshots/09-help.png", alt: "帮助文档页面" }
         ]
       }
     ]
@@ -475,6 +493,22 @@ function blockId(sectionIndex, subIndex, blockIndex) {
 }
 
 function HelpBlock({ block, id }) {
+  if (block.type === "image") {
+    return (
+      <figure id={id} className="help-figure">
+        <img
+          className="help-image"
+          src={block.src}
+          alt={block.alt}
+          loading="lazy"
+        />
+        {block.caption ? (
+          <figcaption className="help-figcaption">{block.caption}</figcaption>
+        ) : null}
+      </figure>
+    );
+  }
+
   if (block.type === "p") {
     return (
       <p id={id} className="help-paragraph">

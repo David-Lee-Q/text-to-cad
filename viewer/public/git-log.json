@@ -1,5 +1,15 @@
 [
  {
+  "hash": "cc27c45",
+  "date": "2026-08-10 18:28:17",
+  "message": "style(viewer): 提交记录弹窗背景透明度调整为 30%"
+ },
+ {
+  "hash": "c13eb4c",
+  "date": "2026-08-10 18:23:29",
+  "message": "chore(viewer): 刷新提交记录"
+ },
+ {
   "hash": "eb6364e",
   "date": "2026-08-10 18:22:55",
   "message": "style(viewer): 提交记录弹窗卡片改为毛玻璃质感"

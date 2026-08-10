@@ -1,6 +1,7 @@
-import { StrictMode, useSyncExternalStore } from "react";
+import { StrictMode, useEffect, useSyncExternalStore, useState } from "react";
 import { createRoot } from "react-dom/client";
 import CadWorkspace from "./components/CadWorkspace";
+import HelpPage from "./components/workbench/HelpPage";
 import faviconUrl from "./assets/favicon.ico";
 import "./styles/globals.css";
 import { I18nProvider } from "./i18n";
@@ -49,11 +50,28 @@ function bootstrap() {
 }
 
 function AppRoot() {
+  const [route, setRoute] = useState(() => window.location.hash || "");
   const { manifest, generationStatus, revision, catalogHydrated, catalogRefreshing, catalogError, activeDir } = useSyncExternalStore(
     subscribeCadManifest,
     getCadManifestSnapshot,
     getCadManifestSnapshot,
   );
+
+  useEffect(() => {
+    const onHashChange = () => setRoute(window.location.hash || "");
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  if (route.startsWith("#/help")) {
+    return (
+      <HelpPage
+        onBack={() => {
+          window.location.hash = "";
+        }}
+      />
+    );
+  }
 
   return (
     <CadWorkspace

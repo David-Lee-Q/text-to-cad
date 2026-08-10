@@ -80,6 +80,7 @@ import {
   ellipsisBreadcrumbMenuDirectory
 } from "@/workbench/breadcrumbs";
 import LanguageToggle from "./LanguageToggle";
+import HelpButton from "./HelpButton";
 import { useI18n } from "@/i18n";
 import viewerPackage from "../../../../package.json";
 
@@ -1292,6 +1293,7 @@ export default function CadWorkspaceTopBar({
 
       <TooltipProvider delayDuration={250}>
         <div className="flex shrink-0 items-center gap-1.5">
+          <HelpButton />
           <LanguageToggle />
           <VersionReleaseLink
             version={viewerVersion}

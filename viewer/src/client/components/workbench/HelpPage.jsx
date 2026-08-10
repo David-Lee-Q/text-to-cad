@@ -1,0 +1,688 @@
+import { useMemo } from "react";
+import { ArrowLeft, BookOpen, Languages } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  TooltipProvider
+} from "@/components/ui/tooltip";
+import LanguageToggle from "./LanguageToggle";
+import { useI18n } from "@/i18n";
+
+const HELP_DOCUMENT = {
+  en: {
+    description: "A user guide for CAD Viewer, the browser previewer for CAD, G-code, and robot-description files.",
+    sections: [
+      {
+        title: "Quick Start",
+        blocks: [
+          { type: "p", text: "CAD Viewer previews local CAD, G-code, and robot files directly in the browser. Select a file from the left file browser or the home screen shortcuts to start." }
+        ],
+        subs: [
+          {
+            title: "Interface Overview",
+            blocks: [
+              { type: "p", text: "The workspace is composed of four main areas:" },
+              {
+                type: "list",
+                items: [
+                  "Top bar — breadcrumb navigation, help and language controls, theme settings, update check, and community links.",
+                  "Left sidebar — searchable file and directory browser.",
+                  "Center viewport — 3D rendering of the selected file.",
+                  "Right panel — format-specific file sheets with metadata, parameters, and issues."
+                ]
+              },
+              { type: "p", text: "A floating toolbar and drawing toolbar overlay the viewport for view navigation and annotations." }
+            ]
+          },
+          {
+            title: "Opening and Browsing Files",
+            blocks: [
+              { type: "p", text: "Use the left sidebar to browse the active directory. The search box filters files by name, id, or path. Click a file to load it into the viewport." },
+              { type: "p", text: "The home screen shows quick-entry icons for recently used files. Files are grouped by icon type: assembly, DXF, G-code, robot, STEP part, STL/3MF/GLB mesh, and implicit CAD." },
+              { type: "p", text: "Drag the sidebar edge to resize it. On mobile the sidebar opens as a drawer." }
+            ]
+          },
+          {
+            title: "Switching Language",
+            blocks: [
+              { type: "p", text: "The top bar language toggle switches the entire interface between Chinese and English. The choice is saved locally and applied to every menu, description, and tooltip across both the workspace and the help page." }
+            ]
+          }
+        ]
+      },
+      {
+        title: "3D Viewing",
+        blocks: [
+          { type: "p", text: "CAD Viewer renders STEP assemblies, mesh models, robot descriptions, DXF drawings, G-code toolpaths, and implicit CAD geometry in a shared 3D viewport." }
+        ],
+        subs: [
+          {
+            title: "View Navigation",
+            blocks: [
+              { type: "p", text: "Orbit, pan, and zoom the camera with the mouse or touch gestures. Use the zoom controls in the corner or the floating toolbar to fit the model to the view and reset zoom." },
+              { type: "p", text: "The view-plane indicator shows the current camera orientation in the x/y/z axes." }
+            ]
+          },
+          {
+            title: "Display Modes",
+            blocks: [
+              { type: "p", text: "Seven display modes are available for STEP views: Solid, Rendered, X-Ray, Hidden, Lines, Flat, and Wire." },
+              {
+                type: "list",
+                items: [
+                  "Solid — shaded surfaces.",
+                  "Rendered — lit, material-aware rendering.",
+                  "X-Ray — translucent surfaces.",
+                  "Hidden — hidden-line visualization.",
+                  "Lines — edge-only drawing.",
+                  "Flat — flat-shaded faces.",
+                  "Wire — wireframe mesh."
+                ]
+              }
+            ]
+          },
+          {
+            title: "Projection",
+            blocks: [
+              { type: "p", text: "Switch between Orthographic and Perspective projection from the display controls. Orthographic is preferred for measurement-style inspection; Perspective gives a natural depth feel." }
+            ]
+          }
+        ]
+      },
+      {
+        title: "File Format Guides",
+        blocks: [],
+        subs: [
+          {
+            title: "STEP Assembly",
+            blocks: [
+              { type: "p", text: "The STEP file sheet shows the assembly and topology tree: parts, reference geometry, and mates. Select a part to highlight it in the viewport." },
+              {
+                type: "list",
+                items: [
+                  "Hide or isolate parts to inspect inner geometry.",
+                  "Use collapse-all and expand-all to manage a deep tree.",
+                  "Copy a reference to a part or load its child nodes.",
+                  "Play part-level animations and adjust speed and time."
+                ]
+              }
+            ]
+          },
+          {
+            title: "Robot Files (URDF / SDF / SRDF)",
+            blocks: [
+              { type: "p", text: "Robot files expose joint controls with sliders. Set joint angles, copy values or angles, and reset the pose to the stored defaults." },
+              { type: "p", text: "Pose groups store named positions. Solve Inverse Kinematics to move the end effector to a target pose, or plan a motion to the pose." },
+              { type: "p", text: "SDF files also show simulator metadata: includes, plugins, sensors, lights, and physics. SRDF files expose MoveIt planning groups and joints." }
+            ]
+          },
+          {
+            title: "DXF Drawing",
+            blocks: [
+              { type: "p", text: "The DXF sheet toggles between 2D and 3D view modes. In 3D mode you can adjust the bend direction, bend angle, and preview thickness for flat-pattern review." }
+            ]
+          },
+          {
+            title: "Implicit CAD Parameters",
+            blocks: [
+              { type: "p", text: "Implicit CAD files are controlled by parameter sliders, numeric inputs, and color pickers. Adjust a parameter to see the signed-distance-field model regenerate in real time." },
+              {
+                type: "list",
+                items: [
+                  "Copy or paste the parameter JSON to share exact settings.",
+                  "Reset parameters to defaults at any time.",
+                  "Play parameter animations and set speed from 0.1x to 3x.",
+                  "Change the graphics scale from the graphics settings section."
+                ]
+              }
+            ]
+          },
+          {
+            title: "G-code Toolpath",
+            blocks: [
+              { type: "p", text: "The G-code sheet controls preview detail with a slider. Increase the level for a denser toolpath preview, or lower it for faster interaction on large files." }
+            ]
+          },
+          {
+            title: "Mesh Models (STL / 3MF / GLB)",
+            blocks: [
+              { type: "p", text: "Mesh files render directly in the viewport. Use the same navigation, display modes, and projection controls as STEP models." }
+            ]
+          }
+        ]
+      },
+      {
+        title: "Annotation and Drawing",
+        blocks: [
+          { type: "p", text: "Toggle the drawing pen from the floating toolbar to annotate directly on the model." }
+        ],
+        subs: [
+          {
+            title: "Drawing Tools",
+            blocks: [
+              { type: "p", text: "The drawing toolbar offers freehand, line, surface line, arrow, double arrow, rectangle, circle, fill, and erase tools." },
+              { type: "p", text: "Use the crosshair to pick reference points precisely before placing annotation elements." }
+            ]
+          },
+          {
+            title: "Undo and Redo",
+            blocks: [
+              { type: "p", text: "Use Ctrl/Cmd+Z to undo and Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y to redo drawing actions. Undo and redo affect the current drawing session." }
+            ]
+          }
+        ]
+      },
+      {
+        title: "Appearance and Display Settings",
+        blocks: [
+          { type: "p", text: "Open the theme settings popover from the top bar to personalize the appearance of the viewport and materials." }
+        ],
+        subs: [
+          {
+            title: "Theme Presets",
+            blocks: [
+              { type: "p", text: "Choose a built-in preset from the preset menu, or save the current settings as a custom preset. Delete, reset, or restore defaults from the same menu." }
+            ]
+          },
+          {
+            title: "Materials and Background",
+            blocks: [
+              { type: "p", text: "Adjust material appearance, background color, ground grid, environment, and lighting from the appearance section." }
+            ]
+          },
+          {
+            title: "Clip, Exploded View, and Edges",
+            blocks: [
+              { type: "p", text: "Enable the clip plane to cut through the model, the exploded view to separate assemblies, and edge display to emphasize boundaries." }
+            ]
+          }
+        ]
+      },
+      {
+        title: "File Operations and Sharing",
+        blocks: [],
+        subs: [
+          {
+            title: "File Context Menu",
+            blocks: [
+              { type: "p", text: "Right-click a file in the sidebar for operations: reveal in folder, copy path, copy relative path, copy link, and download." }
+            ]
+          },
+          {
+            title: "Metadata and Issues",
+            blocks: [
+              { type: "p", text: "The file panel lists metadata groups with copy buttons. The status section lists issues and warnings with severity badges so you can review and report problems." }
+            ]
+          }
+        ]
+      },
+      {
+        title: "Keyboard Shortcuts",
+        blocks: [
+          {
+            type: "table",
+            headers: ["Shortcut", "Action"],
+            rows: [
+              ["Ctrl/Cmd+Z", "Undo drawing action"],
+              ["Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y", "Redo drawing action"],
+              ["Esc", "Close overlay or exit preview"]
+            ]
+          }
+        ]
+      },
+      {
+        title: "Updates and Support",
+        blocks: [
+          { type: "callout", kind: "tip", text: "The version label in the top bar shows the installed version. If a newer release is available you will see an update prompt with the install command." },
+          { type: "p", text: "Join the community Discord or open the GitHub repository from the top bar links to report issues, ask questions, and follow development." }
+        ]
+      }
+    ]
+  },
+  zh: {
+    description: "CAD Viewer 用户指南，面向 CAD、G-code 与机器人描述文件的浏览器预览器。",
+    sections: [
+      {
+        title: "快速入门",
+        blocks: [
+          { type: "p", text: "CAD Viewer 直接在浏览器中预览本地 CAD、G-code 与机器人描述文件。从左侧文件浏览器或首页快捷入口选择一个文件即可开始。" }
+        ],
+        subs: [
+          {
+            title: "界面总览",
+            blocks: [
+              { type: "p", text: "工作台由四个主要区域组成：" },
+              {
+                type: "list",
+                items: [
+                  "顶部栏——面包屑导航、帮助与语言切换、主题设置、更新检查与社区链接。",
+                  "左侧边栏——可搜索的文件与目录浏览器。",
+                  "中央视口——所选文件的 3D 渲染。",
+                  "右侧面板——按格式区分的文件面板，展示元数据、参数与问题。"
+                ]
+              },
+              { type: "p", text: "悬浮工具栏与绘图工具栏覆盖在视口上，用于视图导航与标注。" }
+            ]
+          },
+          {
+            title: "打开与浏览文件",
+            blocks: [
+              { type: "p", text: "使用左侧边栏浏览当前目录。搜索框可按名称、ID 或路径过滤文件。点击文件即可载入视口。" },
+              { type: "p", text: "首页显示最近使用文件的快捷入口图标。文件按图标类型分组：装配体、DXF、G-code、机器人、STEP 零件、STL/3MF/GLB 网格与隐式 CAD。" },
+              { type: "p", text: "拖拽侧边栏边缘可调整宽度。移动端侧边栏以抽屉形式打开。" }
+            ]
+          },
+          {
+            title: "切换语言",
+            blocks: [
+              { type: "p", text: "顶部栏的语言切换按钮可在中文与英文之间切换整个界面。选择会被本地保存，并应用到工作台与帮助页的每个菜单、描述和提示。" }
+            ]
+          }
+        ]
+      },
+      {
+        title: "三维查看",
+        blocks: [
+          { type: "p", text: "CAD Viewer 在共享的 3D 视口中渲染 STEP 装配体、网格模型、机器人描述文件、DXF 图纸、G-code 刀路与隐式 CAD 几何。" }
+        ],
+        subs: [
+          {
+            title: "视图导航",
+            blocks: [
+              { type: "p", text: "使用鼠标或触控手势旋转、平移、缩放相机。使用角落的缩放控件或悬浮工具栏将模型适配到视图并重置缩放。" },
+              { type: "p", text: "视图平面指示器以 x/y/z 轴显示当前相机朝向。" }
+            ]
+          },
+          {
+            title: "显示模式",
+            blocks: [
+              { type: "p", text: "STEP 视图提供七种显示模式：实体、渲染、X 射线、隐藏、线条、平面与线框。" },
+              {
+                type: "list",
+                items: [
+                  "实体——着色表面。",
+                  "渲染——带光照、材质感知的渲染。",
+                  "X 射线——半透明表面。",
+                  "隐藏——隐藏线可视化。",
+                  "线条——仅边线绘制。",
+                  "平面——平面着色面片。",
+                  "线框——线框网格。"
+                ]
+              }
+            ]
+          },
+          {
+            title: "投影方式",
+            blocks: [
+              { type: "p", text: "从显示控件切换正射与透视投影。正射适合测量式检查；透视带来自然的纵深观感。" }
+            ]
+          }
+        ]
+      },
+      {
+        title: "文件格式指南",
+        blocks: [],
+        subs: [
+          {
+            title: "STEP 装配体",
+            blocks: [
+              { type: "p", text: "STEP 文件面板展示装配体与拓扑树：零件、参考几何与配合。选择零件即可在视口中高亮。" },
+              {
+                type: "list",
+                items: [
+                  "隐藏或隔离零件以检查内部几何。",
+                  "使用全部折叠与全部展开管理深层级树。",
+                  "复制零件的引用或加载其子节点。",
+                  "播放零件级动画并调整速度与时间。"
+                ]
+              }
+            ]
+          },
+          {
+            title: "机器人文件（URDF / SDF / SRDF）",
+            blocks: [
+              { type: "p", text: "机器人文件通过滑杆提供关节控制。设置关节角度、复制数值或角度，并可重置到存储的默认姿态。" },
+              { type: "p", text: "位置组保存命名位置。可求解逆运动学将末端执行器移动到目标位姿，或规划到该位姿的运动。" },
+              { type: "p", text: "SDF 文件还展示仿真元数据：includes、plugins、sensors、lights 与 physics。SRDF 文件展示 MoveIt 规划组与关节。" }
+            ]
+          },
+          {
+            title: "DXF 图纸",
+            blocks: [
+              { type: "p", text: "DXF 面板可在 2D 与 3D 视图模式间切换。3D 模式下可调整折弯方向、折弯角度与预览厚度，用于展开图审查。" }
+            ]
+          },
+          {
+            title: "隐式 CAD 参数",
+            blocks: [
+              { type: "p", text: "隐式 CAD 文件通过参数滑杆、数值输入与颜色选择器控制。调整参数即可看到符号距离场模型实时重新生成。" },
+              {
+                type: "list",
+                items: [
+                  "复制或粘贴参数 JSON 以分享精确设置。",
+                  "随时重置参数到默认值。",
+                  "播放参数动画并设置 0.1x 至 3x 的速度。",
+                  "在图形设置区更改整体比例。"
+                ]
+              }
+            ]
+          },
+          {
+            title: "G-code 刀路",
+            blocks: [
+              { type: "p", text: "G-code 面板通过滑杆控制预览细节等级。提高等级可获得更密集的刀路预览，大文件时可降低等级以加快交互。" }
+            ]
+          },
+          {
+            title: "网格模型（STL / 3MF / GLB）",
+            blocks: [
+              { type: "p", text: "网格文件直接在视口中渲染。使用与 STEP 模型相同的导航、显示模式与投影控制。" }
+            ]
+          }
+        ]
+      },
+      {
+        title: "标注与绘图",
+        blocks: [
+          { type: "p", text: "从悬浮工具栏切换绘图笔，即可直接在模型上标注。" }
+        ],
+        subs: [
+          {
+            title: "绘图工具",
+            blocks: [
+              { type: "p", text: "绘图工具栏提供手绘、直线、曲面线、箭头、双箭头、矩形、圆形、填充与擦除工具。" },
+              { type: "p", text: "放置标注元素前可使用十字准星精确拾取参考点。" }
+            ]
+          },
+          {
+            title: "撤销与重做",
+            blocks: [
+              { type: "p", text: "使用 Ctrl/Cmd+Z 撤销，Ctrl/Cmd+Shift+Z 或 Ctrl/Cmd+Y 重做绘图操作。撤销与重做作用于当前绘图会话。" }
+            ]
+          }
+        ]
+      },
+      {
+        title: "外观与显示设置",
+        blocks: [
+          { type: "p", text: "从顶部栏打开主题设置弹出面板，个性化视口与材质的外观。" }
+        ],
+        subs: [
+          {
+            title: "主题预设",
+            blocks: [
+              { type: "p", text: "从预设菜单选择内置预设，或将当前设置保存为自定义预设。同一菜单中可删除、重置或恢复默认。" }
+            ]
+          },
+          {
+            title: "材质与背景",
+            blocks: [
+              { type: "p", text: "从外观分区调整材质外观、背景颜色、地面网格、环境与光照。" }
+            ]
+          },
+          {
+            title: "剖切、爆炸视图与边线",
+            blocks: [
+              { type: "p", text: "启用剖切平面以切开模型查看内部，启用爆炸视图分离装配体，启用边线显示强调边界。" }
+            ]
+          }
+        ]
+      },
+      {
+        title: "文件操作与分享",
+        blocks: [],
+        subs: [
+          {
+            title: "文件右键菜单",
+            blocks: [
+              { type: "p", text: "右键侧边栏中的文件可执行：在文件夹中显示、复制路径、复制相对路径、复制链接与下载。" }
+            ]
+          },
+          {
+            title: "元数据与问题状态",
+            blocks: [
+              { type: "p", text: "文件面板列出带复制按钮的元数据分组。状态区列出带严重级别徽章的问题与警告，方便审查与反馈。" }
+            ]
+          }
+        ]
+      },
+      {
+        title: "键盘快捷键",
+        blocks: [
+          {
+            type: "table",
+            headers: ["快捷键", "操作"],
+            rows: [
+              ["Ctrl/Cmd+Z", "撤销绘图操作"],
+              ["Ctrl/Cmd+Shift+Z 或 Ctrl/Cmd+Y", "重做绘图操作"],
+              ["Esc", "关闭浮层或退出预览"]
+            ]
+          }
+        ]
+      },
+      {
+        title: "更新与支持",
+        blocks: [
+          { type: "callout", kind: "tip", text: "顶部栏的版本号显示已安装版本。若有新版本可用，将出现带安装命令的更新提示。" },
+          { type: "p", text: "通过顶部栏链接加入社区 Discord 或打开 GitHub 仓库，可反馈问题、提问并跟进开发。" }
+        ]
+      }
+    ]
+  }
+};
+
+function blockId(sectionIndex, subIndex, blockIndex) {
+  return `h-${sectionIndex}-${subIndex}-${blockIndex}`;
+}
+
+function HelpBlock({ block, id }) {
+  if (block.type === "p") {
+    return (
+      <p id={id} className="help-paragraph">
+        {block.text}
+      </p>
+    );
+  }
+
+  if (block.type === "list") {
+    const ListTag = block.ordered ? "ol" : "ul";
+    return (
+      <ListTag id={id} className="help-list">
+        {block.items.map((item, index) => (
+          <li key={index}>{item}</li>
+        ))}
+      </ListTag>
+    );
+  }
+
+  if (block.type === "table") {
+    return (
+      <div className="help-table-wrap" id={id}>
+        <table className="help-table">
+          <thead>
+            <tr>
+              {block.headers.map((header, index) => (
+                <th key={index}>{header}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {block.rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, cellIndex) => (
+                  <td key={cellIndex}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  if (block.type === "callout") {
+    return (
+      <div
+        id={id}
+        className={`help-callout help-callout-${block.kind || "note"}`}
+      >
+        {block.text}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function HelpSection({ section, sectionIndex }) {
+  return (
+    <section className="help-section">
+      <h2 id={`help-heading-${sectionIndex}`} className="help-heading-2">
+        {section.title}
+      </h2>
+      {section.blocks?.length ? (
+        <div className="help-blocks">
+          {section.blocks.map((block, blockIndex) => (
+            <HelpBlock
+              key={blockIndex}
+              block={block}
+              id={blockId(sectionIndex, -1, blockIndex)}
+            />
+          ))}
+        </div>
+      ) : null}
+      {section.subs?.length ? (
+        <div className="help-subs">
+          {section.subs.map((sub, subIndex) => (
+            <div key={sub.title} className="help-sub">
+              <h3 id={`help-heading-${sectionIndex}-${subIndex}`} className="help-heading-3">
+                {sub.title}
+              </h3>
+              {sub.blocks?.length ? (
+                <div className="help-blocks">
+                  {sub.blocks.map((block, blockIndex) => (
+                    <HelpBlock
+                      key={blockIndex}
+                      block={block}
+                      id={blockId(sectionIndex, subIndex, blockIndex)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function HelpToc({ sections }) {
+  const handleClick = (event, headingId) => {
+    event.preventDefault();
+    const element = document.getElementById(headingId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  return (
+    <nav className="help-toc" aria-label="Table of contents">
+      {sections.map((section, sectionIndex) => (
+        <div key={section.title} className="help-toc-group">
+          <a
+            className="toc-level-0"
+            href={`#help-heading-${sectionIndex}`}
+            onClick={(event) => handleClick(event, `help-heading-${sectionIndex}`)}
+          >
+            {section.title}
+          </a>
+          {section.subs?.length ? (
+            <div className="help-toc-subs">
+              {section.subs.map((sub, subIndex) => (
+                <a
+                  key={sub.title}
+                  className="toc-level-1"
+                  href={`#help-heading-${sectionIndex}-${subIndex}`}
+                  onClick={(event) => handleClick(event, `help-heading-${sectionIndex}-${subIndex}`)}
+                >
+                  {sub.title}
+                </a>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+export default function HelpPage({ onBack }) {
+  const { lang, t } = useI18n();
+  const documentForLang = useMemo(
+    () => HELP_DOCUMENT[lang] || HELP_DOCUMENT.en,
+    [lang]
+  );
+
+  const backToWorkspace = () => {
+    if (typeof onBack === "function") {
+      onBack();
+      return;
+    }
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    window.location.hash = "";
+  };
+
+  return (
+    <TooltipProvider delayDuration={250}>
+      <div className="help-page">
+        <header className="help-header">
+        <div className="help-header-left">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={t("helpBackToWorkspace")}
+            title={t("helpBackToWorkspace")}
+            onClick={backToWorkspace}
+            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-sm px-2 text-xs font-medium leading-none text-muted-foreground hover:text-sidebar-foreground"
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span aria-hidden="true">{t("helpBackToWorkspace")}</span>
+          </Button>
+        </div>
+        <div className="help-header-title">
+          <BookOpen className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{t("helpTitle")}</span>
+        </div>
+        <div className="help-header-right">
+          <LanguageToggle />
+        </div>
+      </header>
+
+      <div className="help-layout">
+        <aside className="help-sidebar">
+          <div className="help-toc-heading">
+            <Languages className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{t("helpTableOfContents")}</span>
+          </div>
+          <HelpToc sections={documentForLang.sections} />
+        </aside>
+        <main className="help-content">
+          <h1 className="help-title">{t("helpTitle")}</h1>
+          <p className="help-description">{documentForLang.description}</p>
+          {documentForLang.sections.map((section, sectionIndex) => (
+            <HelpSection
+              key={section.title}
+              section={section}
+              sectionIndex={sectionIndex}
+            />
+          ))}
+        </main>
+      </div>
+      </div>
+    </TooltipProvider>
+  );
+}

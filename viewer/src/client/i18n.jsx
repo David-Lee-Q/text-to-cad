@@ -398,6 +398,10 @@ const translations = {
     sidebar: "Sidebar",
     displaysMobileSidebar: "Displays the mobile sidebar.",
     toggleSidebar: "Toggle Sidebar",
+    helpTitle: "Help",
+    helpOpen: "Open help documentation",
+    helpBackToWorkspace: "Back to workspace",
+    helpTableOfContents: "Table of contents",
   },
   [LANG_ZH]: {
     toggleCadViewer: "切换 CAD Viewer",
@@ -784,6 +788,10 @@ const translations = {
     sidebar: "侧边栏",
     displaysMobileSidebar: "显示移动端侧边栏。",
     toggleSidebar: "切换侧边栏",
+    helpTitle: "帮助",
+    helpOpen: "打开帮助文档",
+    helpBackToWorkspace: "返回工作台",
+    helpTableOfContents: "目录",
   },};
 
 const LANGUAGE_NAMES = {

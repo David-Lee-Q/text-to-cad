@@ -308,8 +308,8 @@ const HELP_DOCUMENT = {
         title: "Updates and Support",
         blocks: [
           { type: "callout", kind: "tip", text: "The version label in the top bar shows the installed version. If a newer release is available you will see an update prompt with the install command." },
-          { type: "p", text: "Hover the version label to open the project Git commit history. The newest commit is highlighted at the top of the list." },
-          { type: "image", src: "/help-screenshots/11-git-log.png", alt: "Git commit history shown on version label hover" },
+          { type: "p", text: "Triple-click the version label in the top bar to open the project Git commit history in a full-screen dialog. The newest commit is highlighted at the top of the list, with the full message shown on the left and the date and hash on the right." },
+          { type: "image", src: "/help-screenshots/11-git-log.png", alt: "Full-screen Git commit history dialog opened by triple-clicking the version label" },
           { type: "p", text: "Join the community Discord or open the GitHub repository from the top bar links to report issues, ask questions, and follow development." },
           { type: "image", src: "/help-screenshots/09-help.png", alt: "The help documentation page" }
         ]
@@ -616,8 +616,8 @@ const HELP_DOCUMENT = {
         title: "更新与支持",
         blocks: [
           { type: "callout", kind: "tip", text: "顶部栏的版本号显示已安装版本。若有新版本可用，将出现带安装命令的更新提示。" },
-          { type: "p", text: "将鼠标悬停在版本号上可打开项目的 Git 提交记录，最新提交在列表顶部高亮显示。" },
-          { type: "image", src: "/help-screenshots/11-git-log.png", alt: "悬停版本号显示的 Git 提交记录" },
+          { type: "p", text: "连击顶部栏的版本号三次可打开全屏提交记录弹窗，最新提交在列表顶部高亮显示；左侧完整展示提交说明，右侧展示日期与哈希。" },
+          { type: "image", src: "/help-screenshots/11-git-log.png", alt: "连击版本号打开的全屏 Git 提交记录弹窗" },
           { type: "p", text: "通过顶部栏链接加入社区 Discord 或打开 GitHub 仓库，可反馈问题、提问并跟进开发。" },
           { type: "image", src: "/help-screenshots/09-help.png", alt: "帮助文档页面" }
         ]

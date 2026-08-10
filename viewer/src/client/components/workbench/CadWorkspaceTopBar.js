@@ -16,7 +16,8 @@ import {
   Package,
   Route,
   SlidersHorizontal,
-  Sun
+  Sun,
+  XIcon
 } from "lucide-react";
 import {
   DEFAULT_VIEWER_SKILLS_INSTALL_COMMAND,
@@ -48,11 +49,12 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "@/components/ui/tooltip";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/ui/utils";
 import { copyTextToClipboard } from "@/ui/clipboard";
 import {
@@ -700,7 +702,6 @@ const topBarIconClasses = "size-4";
 const latestReleaseCacheKeyPrefix = "cad-viewer:latest-release:v1:";
 const latestReleaseCacheTtlMs = 6 * 60 * 60 * 1000;
 const updateVersionTooltipDelayMs = 250;
-const passiveVersionTooltipDelayMs = 700;
 const emptyLatestReleaseCheck = Object.freeze({
   updateAvailable: false,
   latestVersion: "",
@@ -897,8 +898,7 @@ function VersionTooltipRow({ label, version, action = null }) {
   );
 }
 
-function GitLogTooltip() {
-  const { t } = useI18n();
+function useGitLogRecords() {
   const [records, setRecords] = useState(null);
 
   useEffect(() => {
@@ -925,99 +925,122 @@ function GitLogTooltip() {
     };
   }, []);
 
-  if (records === null) {
-    return (
-      <div className="text-[11px] text-muted-foreground">{t("gitLogLoading")}</div>
-    );
-  }
+  return records;
+}
 
-  if (!records.length) {
-    return (
-      <div className="text-[11px] text-muted-foreground">{t("gitLogEmpty")}</div>
-    );
-  }
+function GitLogDialog({ open, onOpenChange }) {
+  const { t } = useI18n();
+  const records = useGitLogRecords();
 
   return (
-    <div className="inline-flex max-w-full flex-col gap-1.5">
-      <div className="px-0.5 text-[11px] font-medium leading-none text-muted-foreground">
-        {t("gitLogTitle")}
-      </div>
-      <ScrollArea
-        className="max-h-72 w-full"
-        type="auto"
-        viewportClassName="max-h-72"
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="fixed inset-0 z-50 flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-4 rounded-none border-0 p-6 sm:max-w-none"
+        showCloseButton={false}
       >
-        <div className="flex min-w-0 flex-col gap-0.5">
-          {records.map((record, index) => {
-            const message = String(record?.message || "").trim();
-            const date = String(record?.date || "").trim();
-            const hash = String(record?.hash || "").trim();
-            const isLatest = index === 0;
-            return (
-              <div
-                key={`${record?.hash || index}:${index}`}
-                className={cn(
-                  "flex min-w-0 items-baseline gap-2 rounded-sm px-0.5 py-1 text-left",
-                  isLatest && "bg-primary/10"
-                )}
-              >
-                <span
-                  className={cn(
-                    "min-w-0 flex-1 truncate font-mono text-[11px] leading-5",
-                    isLatest ? "font-bold text-primary" : "text-foreground"
-                  )}
-                >
-                  {message || "—"}
-                </span>
-                <span
-                  className={cn(
-                    "shrink-0 text-[10px] leading-5 tabular-nums",
-                    isLatest ? "font-bold text-primary" : "text-muted-foreground"
-                  )}
-                >
-                  {date}
-                </span>
-                <span
-                  className={cn(
-                    "shrink-0 font-mono text-[10px] leading-5",
-                    isLatest ? "font-bold text-primary" : "text-muted-foreground"
-                  )}
-                >
-                  {hash}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </ScrollArea>
-    </div>
+        <DialogHeader className="text-left">
+          <DialogTitle className="text-base font-semibold">{t("gitLogTitle")}</DialogTitle>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("close")}
+            title={t("close")}
+            className="absolute right-4 top-4"
+            onClick={() => onOpenChange(false)}
+          >
+            <XIcon className="size-4" aria-hidden="true" />
+          </Button>
+        </DialogHeader>
+        {records === null ? (
+          <div className="text-sm text-muted-foreground">{t("gitLogLoading")}</div>
+        ) : !records.length ? (
+          <div className="text-sm text-muted-foreground">{t("gitLogEmpty")}</div>
+        ) : (
+          <ScrollArea className="min-h-0 flex-1" type="auto">
+            <div className="flex min-w-0 flex-col gap-2">
+              {records.map((record, index) => {
+                const message = String(record?.message || "").trim();
+                const date = String(record?.date || "").trim();
+                const hash = String(record?.hash || "").trim();
+                const isLatest = index === 0;
+                return (
+                  <div
+                    key={`${record?.hash || index}:${index}`}
+                    className={cn(
+                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-4 rounded-md border border-border/60 px-4 py-3",
+                      isLatest && "border-primary/40 bg-primary/10"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "min-w-0 whitespace-pre-wrap break-words text-sm leading-6",
+                        isLatest ? "font-bold text-primary" : "text-foreground"
+                      )}
+                    >
+                      {message || "—"}
+                    </span>
+                    <span className="flex shrink-0 flex-col items-end gap-1">
+                      <span
+                        className={cn(
+                          "font-mono text-xs leading-none tabular-nums",
+                          isLatest ? "font-bold text-primary" : "text-muted-foreground"
+                        )}
+                      >
+                        {hash}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs leading-none tabular-nums",
+                          isLatest ? "font-bold text-primary" : "text-muted-foreground"
+                        )}
+                      >
+                        {date}
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function VersionReleaseLink() {
+  const { t } = useI18n();
   const versionLabel = "V1.0.1";
+  const [gitLogOpen, setGitLogOpen] = useState(false);
+  const clickTimesRef = useRef([]);
+
+  const handleVersionClick = () => {
+    const now = Date.now();
+    const recent = clickTimesRef.current.filter((time) => now - time <= 1500);
+    recent.push(now);
+    clickTimesRef.current = recent;
+    if (recent.length >= 3) {
+      clickTimesRef.current = [];
+      setGitLogOpen(true);
+    }
+  };
+
   return (
-    <Tooltip delayDuration={passiveVersionTooltipDelayMs}>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          className="h-7 text-muted-foreground tabular-nums hover:text-sidebar-foreground"
-          aria-label={versionLabel}
-        >
-          <span className="inline-flex items-center gap-1">{versionLabel}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent
-        side="bottom"
-        sideOffset={6}
-        className="cad-glass-popover w-fit max-w-[min(30rem,calc(100vw-1rem))] border border-border bg-popover p-2 text-left text-popover-foreground shadow-lg shadow-black/10"
-        arrowClassName="bg-popover fill-popover"
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="xs"
+        className="h-7 text-muted-foreground tabular-nums hover:text-sidebar-foreground"
+        aria-label={versionLabel}
+        title={t("gitLogTripleClickHint")}
+        onClick={handleVersionClick}
       >
-        <GitLogTooltip />
-      </TooltipContent>
-    </Tooltip>
+        <span className="inline-flex items-center gap-1">{versionLabel}</span>
+      </Button>
+      <GitLogDialog open={gitLogOpen} onOpenChange={setGitLogOpen} />
+    </>
   );
 }
 

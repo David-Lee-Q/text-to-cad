@@ -16,6 +16,7 @@ const translations = {
   [LANG_EN]: {
     toggleCadViewer: "Toggle CAD Viewer",
     selectAFile: "Select a file",
+    retry: "Retry",
     homeTagline: "Master CAD in one sentence",
     selectADirectory: "Select a directory",
     directory: "Directory",
@@ -471,6 +472,7 @@ const translations = {
   [LANG_ZH]: {
     toggleCadViewer: "切换 CAD Viewer",
     selectAFile: "选择文件",
+    retry: "重试",
     homeTagline: "一句话玩转CAD",
     selectADirectory: "选择目录",
     directory: "目录",

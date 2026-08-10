@@ -2154,6 +2154,7 @@ const CadViewer = forwardRef(function CadViewer({
   const [transformedDisplayEdgeRuntime, setTransformedDisplayEdgeRuntime] = useState(null);
   const [defaultPerspectiveDetached, setDefaultPerspectiveDetached] = useState(false);
   const [error, setError] = useState("");
+  const { t } = useI18n();
   const [viewerReadyTick, setViewerReadyTick] = useState(0);
   const [runtimeResetToken, setRuntimeResetToken] = useState(0);
   const [activeViewPlaneFace, setActiveViewPlaneFace] = useState("");
@@ -4785,9 +4786,19 @@ const CadViewer = forwardRef(function CadViewer({
         activateDefaultViewPlane={activateDefaultViewPlane}
       />
       {error ? (
-        <p className="cad-glass-popover pointer-events-none absolute left-4 top-24 z-20 rounded-[10px] border border-[var(--ui-error-bg)] px-4 py-3 text-sm text-[var(--ui-error-text)] shadow-[var(--ui-shadow-soft)] sm:top-20">
-          {error}
-        </p>
+        <div className="cad-glass-popover pointer-events-auto absolute left-4 top-24 z-20 flex max-w-xs flex-col items-start gap-2 rounded-[10px] border border-[var(--ui-error-bg)] px-4 py-3 text-sm text-[var(--ui-error-text)] shadow-[var(--ui-shadow-soft)] sm:top-20">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setRuntimeResetToken((value) => value + 1);
+            }}
+            className="rounded-md border border-current px-2.5 py-1 text-xs font-medium hover:bg-[var(--ui-error-bg)]/10"
+          >
+            {t("retry")}
+          </button>
+        </div>
       ) : null}
     </div>
   );

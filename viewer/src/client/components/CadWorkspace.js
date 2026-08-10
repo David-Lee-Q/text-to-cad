@@ -1280,6 +1280,11 @@ export default function CadWorkspace({
   const isDesktop = viewerLayoutMode === CAD_WORKSPACE_LAYOUT_MODE.DESKTOP;
   const [fileSheetOpenIntent, setFileSheetOpenIntent] = useState(readInitialFileSheetOpen);
   const [viewerAlertOpen, setViewerAlertOpen] = useState(false);
+  const [viewerRetryCount, setViewerRetryCount] = useState(0);
+  const viewerRetry = useCallback(() => {
+    setViewerAlertOpen(false);
+    setViewerRetryCount((value) => value + 1);
+  }, []);
   const [viewerRuntimeAlert, setViewerRuntimeAlert] = useState(null);
   const [customThemePresets, setCustomThemePresets] = useState(readCustomThemePresets);
   const [themeState, setThemeState] = useState(() => readDirectoryThemeSettingsState(readCustomThemePresets()));
@@ -3233,7 +3238,7 @@ export default function CadWorkspace({
                     : "Loading CAD...";
   const viewerAlert = useMemo(() => {
     if (viewerRuntimeAlert?.blocking) {
-      return viewerRuntimeAlert;
+      return selectedEntry ? viewerRuntimeAlert : null;
     }
     if (!selectedEntry || viewerLoading || selectedGeneratorRunning) {
       return null;
@@ -8808,6 +8813,7 @@ export default function CadWorkspace({
     >
       <div className="fixed inset-0 z-0">
         <CadRenderPane
+          key={viewerRetryCount}
           viewerRef={viewerRef}
           renderFormat={effectiveRenderFormat}
           renderPartsIndividually={isUrdfView || Boolean(selectedStepParameterRuntime)}
@@ -8833,6 +8839,7 @@ export default function CadWorkspace({
           viewportFrameInsets={viewportFrameInsets}
           viewerLoading={viewerLoading}
           viewerAlert={viewerAlert}
+          onViewerAlertRetry={viewerRetry}
           stepUpdateInProgress={effectiveRenderFormat === RENDER_FORMAT.STEP && stepUpdateInProgress}
           referenceSelectionPending={referenceSelectionPending}
           referenceSelectionUnavailable={referenceSelectionUnavailable}
@@ -9349,6 +9356,7 @@ export default function CadWorkspace({
           viewerAlert={viewerAlert}
           previewMode={previewMode}
           setViewerAlertOpen={setViewerAlertOpen}
+          onRetry={viewerRetry}
         />
 
         <Dialog

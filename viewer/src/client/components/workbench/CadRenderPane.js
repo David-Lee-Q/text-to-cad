@@ -311,6 +311,7 @@ export default function CadRenderPane({
   viewportFrameInsets,
   viewerLoading,
   viewerAlert,
+  onViewerAlertRetry,
   stepUpdateInProgress,
   referenceSelectionPending = false,
   referenceSelectionUnavailable = false,
@@ -676,6 +677,15 @@ export default function CadRenderPane({
                 <p className="mt-1 line-clamp-2 min-w-0 max-w-full break-words text-xs leading-5 text-muted-foreground">
                   {viewerAlert.resolution}
                 </p>
+              ) : null}
+              {typeof onViewerAlertRetry === "function" ? (
+                <button
+                  type="button"
+                  onClick={onViewerAlertRetry}
+                  className="mt-1 rounded-md border border-sidebar-border px-3 py-1 text-xs font-medium text-foreground hover:bg-sidebar-accent"
+                >
+                  {t("retry")}
+                </button>
               ) : null}
             </div>
           </div>

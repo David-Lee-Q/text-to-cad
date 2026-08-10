@@ -8,6 +8,7 @@ import {
   AlertDialogTitle
 } from "../ui/alert-dialog";
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import ViewerAlertCommand from "./ViewerAlertCommand";
 import { useI18n } from "@/i18n";
 
@@ -15,7 +16,8 @@ export default function ViewerAlertDialog({
   viewerAlertOpen,
   viewerAlert,
   previewMode,
-  setViewerAlertOpen
+  setViewerAlertOpen,
+  onRetry
 }) {
   const { t } = useI18n();
   if (!viewerAlert || previewMode) {
@@ -47,6 +49,16 @@ export default function ViewerAlertDialog({
         </AlertDialogHeader>
         <ViewerAlertCommand command={viewerAlert.command} />
         <AlertDialogFooter>
+          {typeof onRetry === "function" ? (
+            <Button
+              type="button"
+              onClick={() => {
+                onRetry();
+              }}
+            >
+              {t("retry")}
+            </Button>
+          ) : null}
           <AlertDialogCancel aria-label={t("closeAlertDialog")}>{t("close")}</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>

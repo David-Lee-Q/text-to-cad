@@ -1,5 +1,10 @@
 [
  {
+  "hash": "a4fb6f3",
+  "date": "2026-08-10 16:49:49",
+  "message": "docs(viewer): 帮助文档覆盖度完善"
+ },
+ {
   "hash": "0b56474",
   "date": "2026-08-10 15:52:19",
   "message": "feat(viewer): 品牌更名为 COSMO AI CAD，首页筛选器移除文件标签"

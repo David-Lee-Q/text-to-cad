@@ -35,6 +35,7 @@ import ViewerAlertDialog from "./workbench/ViewerAlertDialog";
 import ViewerLoadingOverlay from "./workbench/ViewerLoadingOverlay";
 import FloatingToolBar from "./workbench/FloatingToolBar";
 import CadWorkspaceTopBar from "./workbench/CadWorkspaceTopBar";
+import AIChatDrawer from "./workbench/AIChatDrawer";
 import { useI18n } from "@/i18n";
 import CadWorkspaceHome from "./workbench/CadWorkspaceHome";
 import { useCadAssets } from "./workbench/hooks/useCadAssets";
@@ -334,6 +335,20 @@ import {
 } from "@/workbench/implicitExport";
 
 const DEFAULT_DOCUMENT_TITLE = "COSMO AI CAD";
+
+function aiFileFormatLabel(sheetKind) {
+  const labels = {
+    dxf: "DXF",
+    urdf: "URDF",
+    srdf: "SRDF",
+    sdf: "SDF",
+    step: "STEP",
+    implicit: "Implicit CAD",
+    gcode: "G-code",
+    mesh: "Mesh"
+  };
+  return labels[String(sheetKind || "").toLowerCase()] || String(sheetKind || "");
+}
 const LOCAL_ASSET_BACKEND = "local-fs";
 const EMPTY_LIST = Object.freeze([]);
 const MOVEIT2_SERVER_ENABLED = moveit2ServerEnabled();
@@ -1316,6 +1331,7 @@ export default function CadWorkspace({
   const [drawingTool, setDrawingTool] = useState(DRAWING_TOOL.FREEHAND);
   const [viewerPerspective, setViewerPerspective] = useState(null);
   const [tabToolMode, setTabToolMode] = useState(TAB_TOOL_MODE.REFERENCES);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   const [drawingStrokes, setDrawingStrokes] = useState([]);
   const [drawingUndoStack, setDrawingUndoStack] = useState([]);
   const [drawingRedoStack, setDrawingRedoStack] = useState([]);
@@ -1676,6 +1692,7 @@ export default function CadWorkspace({
   const selectedGcodeData = selectedGcodeMatches ? gcodeState.gcodeData : null;
   const selectedImplicitModel = selectedImplicitMatches ? implicitState.model : null;
   const selectedImplicitDefinition = selectedImplicitModel?.definition || null;
+
   const selectedDxfFileRef = selectedEntrySourceFormat === RENDER_FORMAT.DXF
     ? fileKey(selectedEntry)
     : "";
@@ -8698,6 +8715,87 @@ export default function CadWorkspace({
     </>
   );
 
+  const aiChatActions = useMemo(() => ({
+    openFile: (key) => {
+      handleSelectEntry(key);
+    },
+    setDisplayMode: (mode) => updateDisplayMode(mode),
+    setProjection: (projection) => updateDisplayProjection(projection),
+    fitView: () => {
+      viewerRef.current?.zoomToFit?.({ animate: true });
+    },
+    resetView: () => {
+      viewerRef.current?.resetZoom?.();
+    },
+    hideAll: () => handleHideAllParts(),
+    showAll: () => handleShowAllHiddenParts(),
+    hideOthers: () => handleHideOtherSelectedParts(),
+    playAnimation: () => {
+      if (isStepView) {
+        handleStepModuleAnimationPlayToggle();
+      } else {
+        handleImplicitAnimationPlayToggle();
+      }
+    },
+    pauseAnimation: () => {
+      if (isStepView) {
+        handleStepModuleAnimationPlayToggle();
+      } else {
+        handleImplicitAnimationPlayToggle();
+      }
+    },
+    screenshot: () => {
+      void handleScreenshotCopy();
+    },
+    enterPreview: () => handleEnterPreviewMode(),
+    exitPreview: () => setPreviewMode(false),
+    resetParams: () => handleResetImplicitParameters(),
+    setParam: (id, value) => handleImplicitParameterChange(id, value),
+    resetPose: () => handleResetUrdfPose(),
+    setTheme: (preference) => handleColorSchemePreferenceChange(preference)
+  }), [
+    handleSelectEntry,
+    updateDisplayMode,
+    updateDisplayProjection,
+    handleHideAllParts,
+    handleShowAllHiddenParts,
+    handleHideOtherSelectedParts,
+    isStepView,
+    handleStepModuleAnimationPlayToggle,
+    handleImplicitAnimationPlayToggle,
+    handleScreenshotCopy,
+    handleEnterPreviewMode,
+    handleResetImplicitParameters,
+    handleImplicitParameterChange,
+    handleResetUrdfPose,
+    handleColorSchemePreferenceChange
+  ]);
+
+  const aiChatContext = useMemo(() => ({
+    sourceFormat: selectedEntrySourceFormat,
+    fileName: selectedEntry && typeof sidebarLabelForEntry === "function"
+      ? sidebarLabelForEntry(selectedEntry)
+      : "",
+    fileFormatLabel: aiFileFormatLabel(selectedFileSheetKind),
+    catalog: manifestEntries.map((entry) => ({
+      key: fileKey(entry),
+      label: typeof sidebarLabelForEntry === "function" ? sidebarLabelForEntry(entry) : fileKey(entry)
+    })),
+    parameters: Array.isArray(selectedImplicitDefinition?.parameters)
+      ? selectedImplicitDefinition.parameters.map((parameter) => ({
+          id: parameter.id,
+          label: parameter.label || parameter.id
+        }))
+      : []
+  }), [
+    selectedEntrySourceFormat,
+    selectedEntry,
+    sidebarLabelForEntry,
+    selectedFileSheetKind,
+    manifestEntries,
+    selectedImplicitDefinition
+  ]);
+
   return (
     <SidebarProvider
       open={effectiveSidebarOpen}
@@ -8841,7 +8939,14 @@ export default function CadWorkspace({
           fileSheetKind={selectedFileSheetKind}
           fileSheetOpen={fileSheetOpen}
           onToggleFileSheet={handleToggleFileSheet}
+          onAiChatOpen={() => setAiChatOpen(true)}
           navigationAvailable={directoryNavigationAvailable}
+        />
+        <AIChatDrawer
+          open={aiChatOpen}
+          onOpenChange={setAiChatOpen}
+          actions={aiChatActions}
+          context={aiChatContext}
         />
 
         <div className="pointer-events-none relative min-h-0 flex-1 overflow-hidden">

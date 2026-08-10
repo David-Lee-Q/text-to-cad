@@ -1063,6 +1063,7 @@ export default function CadWorkspaceTopBar({
   fileSheetKind = "",
   fileSheetOpen = false,
   onToggleFileSheet,
+  onAiChatOpen,
   navigationAvailable = true
 }) {
   const viewerVersion = String(viewerPackage.version || "").trim();
@@ -1259,6 +1260,17 @@ export default function CadWorkspaceTopBar({
 
       <TooltipProvider delayDuration={250}>
         <div className="flex shrink-0 items-center gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("aiOpen")}
+            title={t("aiOpen")}
+            className={topBarIconButtonClasses}
+            onClick={() => onAiChatOpen?.()}
+          >
+            <Bot className={topBarIconClasses} />
+          </Button>
           <HelpButton />
           <LanguageToggle />
           <VersionReleaseLink />

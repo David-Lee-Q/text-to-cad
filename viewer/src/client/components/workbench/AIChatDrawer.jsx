@@ -9,7 +9,7 @@ import {
   SheetTitle
 } from "@/components/ui/sheet";
 import { RENDER_FORMAT } from "@/workbench/constants";
-import { AI_INTENTS, parseAiCommand } from "@/workbench/aiCommands";
+import { AI_COMMAND_ROWS, AI_INTENTS, parseAiCommand } from "@/workbench/aiCommands";
 import { useI18n } from "@/i18n";
 
 function isStepLike(sourceFormat) {
@@ -222,6 +222,7 @@ export default function AIChatDrawer({
   };
 
   const hasFile = Boolean(context?.fileName);
+  const showCommands = input.trim().startsWith("/");
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -229,10 +230,11 @@ export default function AIChatDrawer({
         side="right"
         className="sm:max-w-md"
         overlayClassName="bg-black/20"
+        showCloseButton={false}
       >
         <SheetTitle className="sr-only">{t("aiTitle")}</SheetTitle>
-        <div className="flex h-full min-h-0 flex-col gap-3">
-          <div className="flex shrink-0 items-center justify-between border-b border-sidebar-border pb-3">
+        <div className="flex h-full min-h-0 flex-col gap-3 py-4">
+          <div className="flex shrink-0 items-center justify-between px-4 pb-3">
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Bot className="size-4 text-primary" aria-hidden="true" />
               <span>{t("aiTitle")}</span>
@@ -251,7 +253,7 @@ export default function AIChatDrawer({
           </div>
 
           <ScrollArea ref={scrollRef} className="min-h-0 flex-1" type="auto">
-            <div className="flex flex-col gap-2.5 pb-1">
+            <div className="flex flex-col gap-2.5 px-4 pb-1">
               {messages.map((message) => {
                 const isUser = message.role === "user";
                 return (
@@ -279,13 +281,36 @@ export default function AIChatDrawer({
           </ScrollArea>
 
           {!hasFile ? (
-            <div className="shrink-0 rounded-md border border-dashed border-sidebar-border px-3 py-2 text-xs text-muted-foreground">
+            <div className="shrink-0 rounded-md border border-dashed border-sidebar-border px-4 py-2 text-xs text-muted-foreground">
               {t("aiNoFileHint")}
             </div>
           ) : null}
 
+          {showCommands ? (
+            <div className="shrink-0 overflow-hidden rounded-md border border-sidebar-border">
+              <div className="border-b border-sidebar-border bg-sidebar-accent/40 px-4 py-1.5 text-[11px] font-medium text-muted-foreground">
+                {t("aiCmdListTitle")}
+              </div>
+              <ScrollArea className="max-h-52" type="auto">
+                <table className="w-full text-left text-xs">
+                  <tbody>
+                    {AI_COMMAND_ROWS.map((row) => (
+                      <tr
+                        key={`${row.zh}-${row.en}`}
+                        className="border-b border-sidebar-border/50 last:border-0"
+                      >
+                        <td className="px-4 py-1.5 font-mono text-foreground">{row.zh}</td>
+                        <td className="px-4 py-1.5 font-mono text-muted-foreground">{row.en}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ScrollArea>
+            </div>
+          ) : null}
+
           <form
-            className="flex shrink-0 items-center gap-2"
+            className="flex shrink-0 items-center gap-2 px-4"
             onSubmit={(event) => {
               event.preventDefault();
               sendMessage();

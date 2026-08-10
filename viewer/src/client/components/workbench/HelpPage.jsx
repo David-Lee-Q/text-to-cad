@@ -262,16 +262,16 @@ const HELP_DOCUMENT = {
       {
         title: "AI Assistant",
         blocks: [
-          { type: "p", text: "The Bot button in the top bar opens the AI assistant drawer. Type natural-language commands to view and edit the current CAD file. The assistant uses a local intent parser, so commands are handled entirely in your browser." },
+          { type: "p", text: "The Bot button in the top bar opens the AI assistant drawer. Type an exact built-in command to view and edit the current CAD file. Commands must match the built-in list exactly (no fuzzy matching); typing a slash (/) in the input shows the full command table. The assistant runs a local intent parser, so commands are handled entirely in your browser." },
           { type: "image", src: "/help-screenshots/12-ai-chat.png", alt: "AI assistant drawer replying to an open-file command" },
           {
             type: "table",
             headers: ["Command", "Action"],
             rows: [
-              ["help", "Show the available commands"],
-              ["open <file name> / 打开 <文件名>", "Open a file from the current directory"],
-              ["show wireframe / 线框模式", "Switch display mode (solid, rendered, x-ray, hidden lines, flat, wireframe)"],
-              ["orthographic projection / 正射投影", "Switch between orthographic and perspective projection"],
+              ["help / 帮助", "Show the available commands"],
+              ["open <file name> / 打开 <文件名>", "Open a file from the current directory (exact file name)"],
+              ["set display mode <mode> / 设置显示模式 <模式>", "Display modes: solid / 实体, rendered / 渲染, transparent / X射线, hidden_edges / 隐藏线, hidden_lines_removed / 线条, unshaded / 平面, wireframe / 线框"],
+              ["set projection <projection> / 设置投影 <投影>", "Projections: orthographic / 正射, perspective / 透视"],
               ["fit view / 适应视图", "Fit the model to the viewport"],
               ["reset view / 重置视图", "Reset the camera zoom"],
               ["screenshot / 截图", "Copy the viewport as an image to the clipboard"],
@@ -279,11 +279,13 @@ const HELP_DOCUMENT = {
               ["show all parts / 显示所有零件", "Show all parts"],
               ["isolate selected / 隔离选中", "Hide every part except the selected one"],
               ["file info / 文件信息", "Show metadata for the current file"],
-              ["set parameter <name> <value>", "Adjust a parameter of an implicit model"],
+              ["set parameter <name> <value> / 设置参数 <名称> <值>", "Adjust a parameter of an implicit model"],
               ["reset parameters / 重置参数", "Restore default parameters"],
               ["reset pose / 重置姿态", "Restore the default pose of a robot"],
               ["play animation / 播放动画", "Play the robot animation"],
               ["pause animation / 暂停动画", "Pause the robot animation"],
+              ["preview mode / 进入预览", "Enter fullscreen preview"],
+              ["exit preview / 退出预览", "Exit preview"],
               ["dark mode / 深色模式", "Switch to the dark theme"],
               ["light mode / 浅色模式", "Switch to the light theme"]
             ]
@@ -570,16 +572,16 @@ const HELP_DOCUMENT = {
       {
         title: "AI 助手",
         blocks: [
-          { type: "p", text: "顶部栏的机器人按钮可打开 AI 助手抽屉。输入自然语言指令即可查看和编辑当前 CAD 文件。助手使用本地意图解析器，指令完全在浏览器内处理。" },
+          { type: "p", text: "顶部栏的机器人按钮可打开 AI 助手抽屉。输入精确的内置指令即可查看和编辑当前 CAD 文件。指令必须与内置指令一一对应，不支持模糊匹配；在输入框输入斜杠（/）可展开完整指令表格。助手使用本地意图解析器，指令完全在浏览器内处理。" },
           { type: "image", src: "/help-screenshots/12-ai-chat.png", alt: "AI 助手抽屉回复打开文件指令" },
           {
             type: "table",
             headers: ["指令", "操作"],
             rows: [
-              ["help", "显示可用指令"],
-              ["open <文件名> / 打开 <文件名>", "打开当前目录中的文件"],
-              ["show wireframe / 线框模式", "切换显示模式（实体、渲染、X 射线、隐藏线、平面、线框）"],
-              ["orthographic projection / 正射投影", "切换正射与透视投影"],
+              ["help / 帮助", "显示可用指令"],
+              ["open <文件名> / 打开 <文件名>", "打开当前目录中的文件（需精确文件名）"],
+              ["set display mode <模式> / 设置显示模式 <模式>", "显示模式：solid/实体、rendered/渲染、transparent/X射线、hidden_edges/隐藏线、hidden_lines_removed/线条、unshaded/平面、wireframe/线框"],
+              ["set projection <投影> / 设置投影 <投影>", "投影：orthographic/正射、perspective/透视"],
               ["fit view / 适应视图", "将模型适配到视口"],
               ["reset view / 重置视图", "重置相机缩放"],
               ["screenshot / 截图", "将视口复制为图像到剪贴板"],
@@ -587,11 +589,13 @@ const HELP_DOCUMENT = {
               ["show all parts / 显示所有零件", "显示所有零件"],
               ["isolate selected / 隔离选中", "隐藏除所选零件外的其他零件"],
               ["file info / 文件信息", "查看当前文件的元数据"],
-              ["set parameter <名称> <值>", "调整隐式模型的参数"],
+              ["set parameter <名称> <值> / 设置参数 <名称> <值>", "调整隐式模型的参数"],
               ["reset parameters / 重置参数", "恢复默认参数"],
               ["reset pose / 重置姿态", "恢复机器人的默认姿态"],
               ["play animation / 播放动画", "播放机器人动画"],
               ["pause animation / 暂停动画", "暂停机器人动画"],
+              ["preview mode / 进入预览", "进入全屏预览"],
+              ["exit preview / 退出预览", "退出预览"],
               ["dark mode / 深色模式", "切换到深色主题"],
               ["light mode / 浅色模式", "切换到浅色主题"]
             ]

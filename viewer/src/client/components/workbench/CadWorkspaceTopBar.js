@@ -938,7 +938,7 @@ function GitLogDialog({ open, onOpenChange }) {
         className="fixed inset-0 z-50 flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 items-center justify-center rounded-none border-0 bg-transparent p-6 backdrop-blur-sm sm:max-w-none"
         showCloseButton={false}
       >
-        <div className="relative flex h-[50dvh] w-full max-w-2xl min-w-0 flex-col gap-4 rounded-lg border border-white/10 bg-popover/30 p-6 text-popover-foreground shadow-2xl shadow-black/30 backdrop-blur-xl">
+        <div className="relative flex h-[50dvh] w-full max-w-2xl min-w-0 flex-col gap-4 rounded-lg border border-white/10 bg-popover/70 p-6 text-popover-foreground shadow-2xl shadow-black/30 backdrop-blur-xl">
           <DialogHeader className="text-left">
             <DialogTitle className="text-base font-semibold">{t("gitLogTitle")}</DialogTitle>
             <Button

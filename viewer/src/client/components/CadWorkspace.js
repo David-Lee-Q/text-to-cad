@@ -8941,6 +8941,9 @@ export default function CadWorkspace({
                   directorySelectionActive={directorySelectionActive}
                   directoryOptions={directoryOptions}
                   onSelectDirectory={handleSelectDirectory}
+                  canManageLocalFiles={fileRevealAvailable}
+                  localFilesBusy={localFilesBusy}
+                  onUploadLocalFiles={handleUploadLocalFiles}
                 />
               ) : null}
 

@@ -3,6 +3,9 @@ import {
   rememberActiveCadDir
 } from "./cadViewerDirectorySession.mjs";
 import { normalizeViewerDefaultFile } from "../../shared/viewerConfig.mjs";
+import {
+  LOCAL_FILES_DIRECTORY_NAME
+} from "./localFileManagement.js";
 
 const CAD_DIR_QUERY_PARAM = "dir";
 const CAD_QUERY_PARAM = "file";
@@ -311,6 +314,15 @@ function createSidebarDirectoryNode(id, name) {
   };
 }
 
+function compareSidebarDirectoryNames(leftName, rightName) {
+  const leftLocal = leftName === LOCAL_FILES_DIRECTORY_NAME;
+  const rightLocal = rightName === LOCAL_FILES_DIRECTORY_NAME;
+  if (leftLocal !== rightLocal) {
+    return leftLocal ? -1 : 1;
+  }
+  return compareSidebarLabels(leftName, rightName);
+}
+
 function finalizeSidebarDirectoryNode(node) {
   return {
     id: node.id,
@@ -318,7 +330,7 @@ function finalizeSidebarDirectoryNode(node) {
     entries: [...node.entries].sort(compareSidebarEntries),
     directories: [...node.children.values()]
       .map(finalizeSidebarDirectoryNode)
-      .sort((a, b) => compareSidebarLabels(a.name, b.name))
+      .sort((a, b) => compareSidebarDirectoryNames(a.name, b.name))
   };
 }
 
@@ -415,6 +427,12 @@ export function listSidebarItems(directory) {
       value: entry
     }))
   ].sort((a, b) => {
+    if (a.type === "directory" && b.type === "directory") {
+      const directoryDiff = compareSidebarDirectoryNames(a.label, b.label);
+      if (directoryDiff !== 0) {
+        return directoryDiff;
+      }
+    }
     const labelDiff = compareSidebarLabels(a.label, b.label);
     if (labelDiff !== 0) {
       return labelDiff;

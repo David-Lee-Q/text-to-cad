@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import {
   Bot,
   Boxes,
@@ -9,9 +10,17 @@ import {
   FolderOpen,
   Layers3,
   Package,
-  Route
+  Route,
+  Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { cn } from "@/ui/utils";
 import { RENDER_FORMAT } from "@/workbench/constants";
 import {
@@ -27,9 +36,38 @@ import {
   fileKey,
   sidebarLabelForEntry
 } from "@/workbench/sidebar";
+import {
+  LOCAL_FILE_ACCEPT_ATTR
+} from "@/workbench/localFileManagement";
 import { useI18n } from "@/i18n";
 
 const MAX_HOME_OPTIONS = 6;
+
+const HOME_FILE_FILTERS = Object.freeze([
+  { value: "all", match: () => true },
+  { value: "assembly", match: (entry, sourceFormat) => entry?.kind === "assembly" },
+  { value: "step", match: (entry, sourceFormat) => sourceFormat === RENDER_FORMAT.STEP && entry?.kind !== "assembly" },
+  { value: "dxf", match: (entry, sourceFormat) => sourceFormat === RENDER_FORMAT.DXF },
+  { value: "gcode", match: (entry, sourceFormat) => sourceFormat === RENDER_FORMAT.GCODE },
+  { value: "implicit", match: (entry, sourceFormat) => sourceFormat === RENDER_FORMAT.IMPLICIT },
+  { value: "robot", match: (entry, sourceFormat) => isRobotRenderFormat(sourceFormat) || entry?.kind === "srdf" },
+  { value: "mesh", match: (entry, sourceFormat) => isMeshRenderFormat(sourceFormat) }
+]);
+
+function homeFilterLabel(value, t) {
+  const translate = typeof t === "function" ? t : (key) => key;
+  const labels = {
+    all: translate("homeFilterAll"),
+    assembly: "Assembly",
+    step: "STEP",
+    dxf: "DXF",
+    gcode: "G-code",
+    implicit: "Implicit",
+    robot: "URDF / SRDF / SDF",
+    mesh: "STL / 3MF / GLB"
+  };
+  return labels[value] || translate("homeFilterAll");
+}
 
 const ENTRY_ICON_COMPONENTS = {
   [ENTRY_ICON_KIND.ASSEMBLY]: Boxes,
@@ -165,10 +203,19 @@ export default function CadWorkspaceHome({
   catalogError = "",
   directorySelectionActive = false,
   directoryOptions = [],
-  onSelectDirectory
+  onSelectDirectory,
+  canManageLocalFiles = false,
+  localFilesBusy = false,
+  onUploadLocalFiles
 }) {
   const { t } = useI18n();
-  const homeEntries = selectHomeEntries(entries);
+  const uploadInputRef = useRef(null);
+  const [fileFilter, setFileFilter] = useState("all");
+  const activeFilter = HOME_FILE_FILTERS.find((filter) => filter.value === fileFilter) || HOME_FILE_FILTERS[0];
+  const filteredEntries = (Array.isArray(entries) ? entries : []).filter((entry) => (
+    activeFilter.match(entry, entrySourceFormat(entry))
+  ));
+  const homeEntries = selectHomeEntries(filteredEntries);
   const normalizedDirectoryOptions = normalizeDirectoryOptions(directoryOptions);
   const hasEntries = homeEntries.length > 0;
   const hasDirectoryOptions = normalizedDirectoryOptions.length > 0;
@@ -184,10 +231,67 @@ export default function CadWorkspaceHome({
         className="cad-glass-popover pointer-events-auto w-full max-w-2xl overflow-hidden rounded-md border border-sidebar-border text-popover-foreground shadow-xl shadow-black/10"
         aria-label={t("homeAria")}
       >
-        <div className="border-b border-sidebar-border px-5 py-4 sm:px-6">
+        <div className="flex items-center justify-between gap-3 border-b border-sidebar-border px-5 py-4 sm:px-6">
           <h1 className="text-lg font-medium leading-6 text-foreground sm:text-xl">
             {heading}
           </h1>
+          {!directorySelectionActive ? (
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
+                  {t("homeFilter")}
+                </span>
+                <Select
+                  value={fileFilter}
+                  onValueChange={(nextValue) => setFileFilter(nextValue)}
+                >
+                  <SelectTrigger size="sm" className="h-7 min-w-32 !text-xs" aria-label={t("homeFilter")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOME_FILE_FILTERS.map((filter) => (
+                      <SelectItem key={filter.value} value={filter.value} className="text-xs">
+                        {homeFilterLabel(filter.value, t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {canManageLocalFiles ? (
+                <div className="flex items-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    disabled={localFilesBusy}
+                    title={t("uploadLocalFilesHint")}
+                    aria-label={t("uploadLocalFiles")}
+                    onClick={() => {
+                      uploadInputRef.current?.click?.();
+                    }}
+                  >
+                    <Upload className={cn("size-4", localFilesBusy && "animate-spin")} aria-hidden="true" />
+                  </Button>
+                  <input
+                    ref={uploadInputRef}
+                    type="file"
+                    multiple
+                    accept={LOCAL_FILE_ACCEPT_ATTR}
+                    className="hidden"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                    onChange={(event) => {
+                      const files = Array.from(event.target.files || []);
+                      event.target.value = "";
+                      if (files.length > 0 && typeof onUploadLocalFiles === "function") {
+                        onUploadLocalFiles(files);
+                      }
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className="divide-y divide-sidebar-border/70">

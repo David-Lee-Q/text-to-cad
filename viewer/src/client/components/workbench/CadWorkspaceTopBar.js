@@ -1172,8 +1172,14 @@ export default function CadWorkspaceTopBar({
 
   return (
     <header
-      className="cad-glass-surface pointer-events-auto flex h-11 shrink-0 items-center gap-2 border-b border-sidebar-border px-2 text-sidebar-foreground"
+      className="cad-glass-surface pointer-events-auto relative flex h-11 shrink-0 items-center gap-2 border-b border-sidebar-border px-2 text-sidebar-foreground"
     >
+      <span
+        className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 select-none truncate rounded-full border border-sidebar-border/60 bg-sidebar/90 px-3 py-1 text-xs font-semibold tracking-wide text-sidebar-foreground/90 backdrop-blur-sm md:block"
+        aria-hidden="true"
+      >
+        COSMO AI CAD
+      </span>
       {navigationAvailable ? (
         <SidebarTrigger
           title={t("toggleCadViewer")}

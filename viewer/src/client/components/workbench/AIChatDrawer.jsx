@@ -314,7 +314,7 @@ export default function AIChatDrawer({
               <div className="border-b border-sidebar-border bg-sidebar-accent/40 px-4 py-1.5 text-[11px] font-medium text-muted-foreground">
                 {t("aiCmdListTitle")}
               </div>
-              <ScrollArea className="max-h-52" type="auto">
+              <ScrollArea className="h-52" type="auto">
                 <table className="w-full text-left text-xs">
                   <tbody>
                     {commandRows.map((row, index) => {

@@ -1,5 +1,10 @@
 [
  {
+  "hash": "8e1ede1",
+  "date": "2026-08-11 00:42:28",
+  "message": "chore: 服务启停脚本移至仓库根目录"
+ },
+ {
   "hash": "b355ccf",
   "date": "2026-08-11 00:38:52",
   "message": "chore(viewer): 添加服务启停脚本 start.sh/stop.sh"

@@ -935,51 +935,52 @@ function GitLogDialog({ open, onOpenChange }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="fixed inset-0 z-50 flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-4 rounded-none border-0 p-6 sm:max-w-none"
+        className="fixed inset-0 z-50 flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 items-center justify-center rounded-none border-0 bg-transparent p-6 backdrop-blur-md sm:max-w-none"
         showCloseButton={false}
       >
-        <DialogHeader className="text-left">
-          <DialogTitle className="text-base font-semibold">{t("gitLogTitle")}</DialogTitle>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("close")}
-            title={t("close")}
-            className="absolute right-4 top-4"
-            onClick={() => onOpenChange(false)}
-          >
-            <XIcon className="size-4" aria-hidden="true" />
-          </Button>
-        </DialogHeader>
-        {records === null ? (
-          <div className="text-sm text-muted-foreground">{t("gitLogLoading")}</div>
-        ) : !records.length ? (
-          <div className="text-sm text-muted-foreground">{t("gitLogEmpty")}</div>
-        ) : (
-          <ScrollArea className="min-h-0 flex-1" type="auto">
-            <div className="flex min-w-0 flex-col gap-2">
-              {records.map((record, index) => {
-                const message = String(record?.message || "").trim();
-                const date = String(record?.date || "").trim();
-                const hash = String(record?.hash || "").trim();
-                const isLatest = index === 0;
-                return (
-                  <div
-                    key={`${record?.hash || index}:${index}`}
-                    className={cn(
-                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-4 rounded-md border border-border/60 px-4 py-3",
-                      isLatest && "border-primary/40 bg-primary/10"
-                    )}
-                  >
-                    <span
+        <div className="relative flex h-[50dvh] w-full max-w-2xl min-w-0 flex-col gap-4 rounded-lg border border-border bg-popover p-6 text-popover-foreground shadow-2xl shadow-black/20">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-base font-semibold">{t("gitLogTitle")}</DialogTitle>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("close")}
+              title={t("close")}
+              className="absolute right-4 top-4"
+              onClick={() => onOpenChange(false)}
+            >
+              <XIcon className="size-4" aria-hidden="true" />
+            </Button>
+          </DialogHeader>
+          {records === null ? (
+            <div className="text-sm text-muted-foreground">{t("gitLogLoading")}</div>
+          ) : !records.length ? (
+            <div className="text-sm text-muted-foreground">{t("gitLogEmpty")}</div>
+          ) : (
+            <ScrollArea className="min-h-0 flex-1" type="auto">
+              <div className="flex min-w-0 flex-col gap-2">
+                {records.map((record, index) => {
+                  const message = String(record?.message || "").trim();
+                  const date = String(record?.date || "").trim();
+                  const hash = String(record?.hash || "").trim();
+                  const isLatest = index === 0;
+                  return (
+                    <div
+                      key={`${record?.hash || index}:${index}`}
                       className={cn(
-                        "min-w-0 whitespace-pre-wrap break-words text-sm leading-6",
-                        isLatest ? "font-bold text-primary" : "text-foreground"
+                        "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-4 rounded-md border border-border/60 px-4 py-3",
+                        isLatest && "border-primary/40 bg-primary/10"
                       )}
                     >
-                      {message || "—"}
-                    </span>
+                      <span
+                        className={cn(
+                          "min-w-0 whitespace-pre-wrap break-words text-sm leading-6",
+                          isLatest ? "font-bold text-primary" : "text-foreground"
+                        )}
+                      >
+                        {message || "—"}
+                      </span>
                     <span className="flex shrink-0 flex-col items-end gap-1">
                       <span
                         className={cn(
@@ -1003,7 +1004,8 @@ function GitLogDialog({ open, onOpenChange }) {
               })}
             </div>
           </ScrollArea>
-        )}
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

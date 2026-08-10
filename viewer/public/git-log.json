@@ -1,5 +1,10 @@
 [
  {
+  "hash": "0b56474",
+  "date": "2026-08-10 15:52:19",
+  "message": "feat(viewer): 品牌更名为 COSMO AI CAD，首页筛选器移除文件标签"
+ },
+ {
   "hash": "ae11c75",
   "date": "2026-08-10 15:49:37",
   "message": "fix(viewer): 幽灵本地文件可删除，git 记录最新条目整行蓝色加粗"

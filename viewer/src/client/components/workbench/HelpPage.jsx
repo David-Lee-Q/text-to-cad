@@ -39,6 +39,7 @@ const HELP_DOCUMENT = {
             blocks: [
               { type: "p", text: "Use the left sidebar to browse the active directory. The search box filters files by name, id, or path. Click a file to load it into the viewport." },
               { type: "p", text: "The home screen shows quick-entry icons for recently used files. Files are grouped by icon type: assembly, DXF, G-code, robot, STEP part, STL/3MF/GLB mesh, and implicit CAD." },
+              { type: "p", text: "Use the type filter at the top of the home screen to narrow the list by file kind: All, Assembly, DXF, G-code, Robot, STEP, Mesh, or Implicit." },
               { type: "p", text: "Drag the sidebar edge to resize it. On mobile the sidebar opens as a drawer." }
             ]
           },
@@ -86,6 +87,31 @@ const HELP_DOCUMENT = {
             title: "Projection",
             blocks: [
               { type: "p", text: "Switch between Orthographic and Perspective projection from the display controls. Orthographic is preferred for measurement-style inspection; Perspective gives a natural depth feel." }
+            ]
+          },
+          {
+            title: "Floating Toolbar",
+            blocks: [
+              { type: "p", text: "A floating toolbar over the viewport gives quick access to the main actions:" },
+              {
+                type: "list",
+                items: [
+                  "Select — pick reference geometry such as faces and edges.",
+                  "Draw — toggle annotation mode.",
+                  "Display — switch display mode and projection.",
+                  "Play — step the animation of a STEP assembly.",
+                  "Pose — pick a target pose for URDF robots.",
+                  "Orbit — enter a distraction-free preview mode; press Esc to exit.",
+                  "Screenshot — copy the current view as an image to the clipboard."
+                ]
+              },
+              { type: "p", text: "Preview mode hides the surrounding panels so you can focus on the model. Press Esc to return to the workspace." }
+            ]
+          },
+          {
+            title: "Copying a Screenshot",
+            blocks: [
+              { type: "p", text: "Use the screenshot button on the floating toolbar to copy the current viewport as an image to the clipboard. Paste it into any document or chat." }
             ]
           }
         ]
@@ -167,6 +193,7 @@ const HELP_DOCUMENT = {
             title: "Drawing Tools",
             blocks: [
               { type: "p", text: "The drawing toolbar offers freehand, line, surface line, arrow, double arrow, rectangle, circle, fill, and erase tools." },
+              { type: "p", text: "The toolbar also includes undo, redo, and clear-all buttons, with the matching keyboard shortcuts listed in the Keyboard Shortcuts section." },
               { type: "p", text: "Use the crosshair to pick reference points precisely before placing annotation elements." }
             ]
           },
@@ -212,13 +239,15 @@ const HELP_DOCUMENT = {
           {
             title: "File Context Menu",
             blocks: [
-              { type: "p", text: "Right-click a file in the sidebar for operations: reveal in folder, copy path, copy relative path, copy link, and download." }
+              { type: "p", text: "Right-click a file in the sidebar for operations: reveal in folder, reveal in explorer view, copy path, copy relative path, copy link, and download." },
+              { type: "p", text: "Implicit CAD files can be exported to STL, 3MF, or GLB from the same context menu." }
             ]
           },
           {
             title: "Local Files Management",
             blocks: [
-              { type: "p", text: "Use the upload button at the bottom of the sidebar to add STEP, STL, 3MF, GLB, G-code, DXF, URDF/SRDF/SDF or Implicit CAD files (up to 200MB each). Uploaded files are stored in a dedicated \"Local Files\" folder and can be renamed or deleted from its context menu. Built-in files are read-only." },
+              { type: "p", text: "Use the upload button on the home screen or at the bottom of the sidebar to add STEP, STL, 3MF, GLB, G-code, DXF, URDF/SRDF/SDF or Implicit CAD files (up to 200MB each)." },
+              { type: "p", text: "Uploaded files are stored in a dedicated \"Local Files\" folder. The folder and its files can be renamed or deleted from their context menus. Built-in files are read-only." },
               { type: "image", src: "/help-screenshots/10-local-files.png", alt: "Local Files context menu with rename and delete" }
             ]
           },
@@ -248,6 +277,8 @@ const HELP_DOCUMENT = {
         title: "Updates and Support",
         blocks: [
           { type: "callout", kind: "tip", text: "The version label in the top bar shows the installed version. If a newer release is available you will see an update prompt with the install command." },
+          { type: "p", text: "Hover the version label to open the project Git commit history. The newest commit is highlighted at the top of the list." },
+          { type: "image", src: "/help-screenshots/11-git-log.png", alt: "Git commit history shown on version label hover" },
           { type: "p", text: "Join the community Discord or open the GitHub repository from the top bar links to report issues, ask questions, and follow development." },
           { type: "image", src: "/help-screenshots/09-help.png", alt: "The help documentation page" }
         ]
@@ -285,6 +316,7 @@ const HELP_DOCUMENT = {
             blocks: [
               { type: "p", text: "使用左侧边栏浏览当前目录。搜索框可按名称、ID 或路径过滤文件。点击文件即可载入视口。" },
               { type: "p", text: "首页显示最近使用文件的快捷入口图标。文件按图标类型分组：装配体、DXF、G-code、机器人、STEP 零件、STL/3MF/GLB 网格与隐式 CAD。" },
+              { type: "p", text: "使用首页顶部的类型筛选器可按文件类型缩小列表范围：全部、装配体、DXF、G-code、机器人、STEP、网格或隐式。" },
               { type: "p", text: "拖拽侧边栏边缘可调整宽度。移动端侧边栏以抽屉形式打开。" }
             ]
           },
@@ -332,6 +364,31 @@ const HELP_DOCUMENT = {
             title: "投影方式",
             blocks: [
               { type: "p", text: "从显示控件切换正射与透视投影。正射适合测量式检查；透视带来自然的纵深观感。" }
+            ]
+          },
+          {
+            title: "悬浮工具栏",
+            blocks: [
+              { type: "p", text: "悬浮在视口上的工具栏提供主要操作的快捷入口：" },
+              {
+                type: "list",
+                items: [
+                  "选择——拾取面、边等参考几何。",
+                  "绘图——切换标注模式。",
+                  "显示——切换显示模式与投影方式。",
+                  "播放——播放 STEP 装配体的动画。",
+                  "位姿——为 URDF 机器人拾取目标位姿。",
+                  "环绕——进入无干扰的预览模式，按 Esc 退出。",
+                  "截图——将当前视图复制为图像到剪贴板。"
+                ]
+              },
+              { type: "p", text: "预览模式会隐藏四周面板，让你专注于模型。按 Esc 返回工作台。" }
+            ]
+          },
+          {
+            title: "复制截图",
+            blocks: [
+              { type: "p", text: "使用悬浮工具栏上的截图按钮可将当前视口复制为图像到剪贴板，随后可粘贴到文档或聊天中。" }
             ]
           }
         ]
@@ -413,6 +470,7 @@ const HELP_DOCUMENT = {
             title: "绘图工具",
             blocks: [
               { type: "p", text: "绘图工具栏提供手绘、直线、曲面线、箭头、双箭头、矩形、圆形、填充与擦除工具。" },
+              { type: "p", text: "工具栏还提供撤销、重做与清空全部按钮，对应的快捷键见“键盘快捷键”章节。" },
               { type: "p", text: "放置标注元素前可使用十字准星精确拾取参考点。" }
             ]
           },
@@ -458,13 +516,15 @@ const HELP_DOCUMENT = {
           {
             title: "文件右键菜单",
             blocks: [
-              { type: "p", text: "右键侧边栏中的文件可执行：在文件夹中显示、复制路径、复制相对路径、复制链接与下载。" }
+              { type: "p", text: "右键侧边栏中的文件可执行：在文件夹中显示、在资源管理器中显示、复制路径、复制相对路径、复制链接与下载。" },
+              { type: "p", text: "隐式 CAD 文件可在同一右键菜单中导出为 STL、3MF 或 GLB。" }
             ]
           },
           {
             title: "本地文件管理",
             blocks: [
-              { type: "p", text: "使用侧边栏底部的上传按钮可添加 STEP、STL、3MF、GLB、G-code、DXF、URDF/SRDF/SDF 或隐式 CAD 文件（单文件上限 200MB）。上传的文件保存在独立的“本地文件”文件夹中，可在其右键菜单中重命名或删除。内置文件为只读，不可修改。" },
+              { type: "p", text: "使用首页或侧边栏底部的上传按钮可添加 STEP、STL、3MF、GLB、G-code、DXF、URDF/SRDF/SDF 或隐式 CAD 文件（单文件上限 200MB）。" },
+              { type: "p", text: "上传的文件保存在独立的“本地文件”文件夹中。文件夹及其文件可在各自的右键菜单中重命名或删除。内置文件为只读，不可修改。" },
               { type: "image", src: "/help-screenshots/10-local-files.png", alt: "本地文件右键菜单，包含重命名与删除" }
             ]
           },
@@ -494,6 +554,8 @@ const HELP_DOCUMENT = {
         title: "更新与支持",
         blocks: [
           { type: "callout", kind: "tip", text: "顶部栏的版本号显示已安装版本。若有新版本可用，将出现带安装命令的更新提示。" },
+          { type: "p", text: "将鼠标悬停在版本号上可打开项目的 Git 提交记录，最新提交在列表顶部高亮显示。" },
+          { type: "image", src: "/help-screenshots/11-git-log.png", alt: "悬停版本号显示的 Git 提交记录" },
           { type: "p", text: "通过顶部栏链接加入社区 Discord 或打开 GitHub 仓库，可反馈问题、提问并跟进开发。" },
           { type: "image", src: "/help-screenshots/09-help.png", alt: "帮助文档页面" }
         ]

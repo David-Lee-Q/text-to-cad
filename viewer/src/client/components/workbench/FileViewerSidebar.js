@@ -12,9 +12,11 @@ import {
   Layers3,
   LoaderCircle,
   Package,
-  Route
+  Route,
+  Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRef } from "react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -62,7 +64,9 @@ import {
   listSidebarItems,
   sidebarLabelForEntry
 } from "@/workbench/sidebar";
+import { LOCAL_FILE_ACCEPT_ATTR } from "@/workbench/localFileManagement";
 import FileAccessContextMenu from "./FileAccessContextMenu";
+import LocalDirectoryContextMenu from "./LocalDirectoryContextMenu";
 
 const DESKTOP_FILE_VIEWER_MIN_WIDTH = 150;
 const DESKTOP_FILE_VIEWER_MAX_WIDTH = "calc(100vw - 0.75rem)";
@@ -101,12 +105,15 @@ function FileEntryButton({
   canRevealFileAssets = false,
   canCopyFileAssetLinks = false,
   canCopyFileAssetPaths = false,
+  canManageLocalFiles = false,
   fileAccessBusyKey = "",
   onDownloadFileAsset,
   onExportImplicitFile,
   onRevealFileAsset,
   onRevealInExplorerView,
   onCopyFileAssetReference,
+  onRenameLocalEntry,
+  onDeleteLocalEntry,
   nested = false
 }) {
   const { isMobile, setOpenMobile } = useSidebar();
@@ -182,12 +189,15 @@ function FileEntryButton({
       canRevealFileAssets={canRevealFileAssets}
       canCopyFileAssetLinks={canCopyFileAssetLinks}
       canCopyFileAssetPaths={canCopyFileAssetPaths}
+      canManageLocalFiles={canManageLocalFiles}
       busyKey={fileAccessBusyKey}
       onDownloadFileAsset={onDownloadFileAsset}
       onExportImplicitFile={onExportImplicitFile}
       onRevealFileAsset={onRevealFileAsset}
       onRevealInExplorerView={onRevealInExplorerView}
       onCopyFileAssetReference={onCopyFileAssetReference}
+      onRenameLocalEntry={onRenameLocalEntry}
+      onDeleteLocalEntry={onDeleteLocalEntry}
     >
       {button}
     </FileAccessContextMenu>
@@ -213,48 +223,66 @@ function DirectoryNode({
   canRevealFileAssets = false,
   canCopyFileAssetLinks = false,
   canCopyFileAssetPaths = false,
+  canManageLocalFiles = false,
   fileAccessBusyKey = "",
   onDownloadFileAsset,
   onExportImplicitFile,
   onRevealFileAsset,
   onRevealInExplorerView,
   onCopyFileAssetReference,
+  onRenameLocalEntry,
+  onDeleteLocalEntry,
   nested = false
 }) {
   const expanded = queryActive || expandedDirectoryIds.has(directory.id);
   const DirectoryItem = nested ? SidebarMenuSubItem : SidebarMenuItem;
 
+  const directoryButton = (
+    <CollapsibleTrigger asChild>
+      <SidebarMenuButton
+        type="button"
+        size="sm"
+        title={directory.name}
+        aria-disabled={queryActive}
+        className={cn(
+          "group/directory min-w-0 w-full justify-start",
+          queryActive && "cursor-default"
+        )}
+        onClick={(event) => {
+          if (queryActive) {
+            event.preventDefault();
+            return;
+          }
+          onToggleDirectory(directory.id);
+        }}
+      >
+        <ChevronRight
+          className={cn(
+            "transition-transform",
+            expanded && "rotate-90"
+          )}
+          aria-hidden="true"
+        />
+        <span className="block min-w-0 flex-1 max-w-full overflow-hidden text-ellipsis whitespace-nowrap">{directory.name}</span>
+      </SidebarMenuButton>
+    </CollapsibleTrigger>
+  );
+
+  const directoryTrigger = (
+    <LocalDirectoryContextMenu
+      directory={directory}
+      canManageLocalFiles={canManageLocalFiles}
+      onRenameLocalEntry={onRenameLocalEntry}
+      onDeleteLocalEntry={onDeleteLocalEntry}
+    >
+      {directoryButton}
+    </LocalDirectoryContextMenu>
+  );
+
   return (
     <Collapsible asChild open={expanded}>
       <DirectoryItem className="min-w-0 w-full max-w-full">
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton
-            type="button"
-            size="sm"
-            title={directory.name}
-            aria-disabled={queryActive}
-            className={cn(
-              "group/directory min-w-0 w-full justify-start",
-              queryActive && "cursor-default"
-            )}
-            onClick={(event) => {
-              if (queryActive) {
-                event.preventDefault();
-                return;
-              }
-              onToggleDirectory(directory.id);
-            }}
-          >
-            <ChevronRight
-              className={cn(
-                "transition-transform",
-                expanded && "rotate-90"
-              )}
-              aria-hidden="true"
-            />
-            <span className="block min-w-0 flex-1 max-w-full overflow-hidden text-ellipsis whitespace-nowrap">{directory.name}</span>
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
+        {directoryTrigger}
 
         <CollapsibleContent className="min-w-0 w-full max-w-full">
           <SidebarMenuSub className="min-w-0 w-full max-w-full">
@@ -281,12 +309,15 @@ function DirectoryNode({
                     canRevealFileAssets={canRevealFileAssets}
                     canCopyFileAssetLinks={canCopyFileAssetLinks}
                     canCopyFileAssetPaths={canCopyFileAssetPaths}
+                    canManageLocalFiles={canManageLocalFiles}
                     fileAccessBusyKey={fileAccessBusyKey}
                     onDownloadFileAsset={onDownloadFileAsset}
                     onExportImplicitFile={onExportImplicitFile}
                     onRevealFileAsset={onRevealFileAsset}
                     onRevealInExplorerView={onRevealInExplorerView}
                     onCopyFileAssetReference={onCopyFileAssetReference}
+                    onRenameLocalEntry={onRenameLocalEntry}
+                    onDeleteLocalEntry={onDeleteLocalEntry}
                     nested={true}
                   />
                 );
@@ -309,12 +340,15 @@ function DirectoryNode({
                     canRevealFileAssets={canRevealFileAssets}
                     canCopyFileAssetLinks={canCopyFileAssetLinks}
                     canCopyFileAssetPaths={canCopyFileAssetPaths}
+                    canManageLocalFiles={canManageLocalFiles}
                     fileAccessBusyKey={fileAccessBusyKey}
                     onDownloadFileAsset={onDownloadFileAsset}
                     onExportImplicitFile={onExportImplicitFile}
                     onRevealFileAsset={onRevealFileAsset}
                     onRevealInExplorerView={onRevealInExplorerView}
                     onCopyFileAssetReference={onCopyFileAssetReference}
+                    onRenameLocalEntry={onRenameLocalEntry}
+                    onDeleteLocalEntry={onDeleteLocalEntry}
                     nested={true}
                   />
                 </SidebarMenuSubItem>
@@ -472,12 +506,17 @@ function FileViewerContents({
   canRevealFileAssets = false,
   canCopyFileAssetLinks = false,
   canCopyFileAssetPaths = false,
+  canManageLocalFiles = false,
+  localFilesBusy = false,
   fileAccessBusyKey = "",
   onDownloadFileAsset,
   onExportImplicitFile,
   onRevealFileAsset,
   onRevealInExplorerView,
   onCopyFileAssetReference,
+  onRenameLocalEntry,
+  onDeleteLocalEntry,
+  onUploadLocalFiles,
   catalogHydrated = false,
   catalogRefreshing = false,
   catalogError = "",
@@ -493,6 +532,7 @@ function FileViewerContents({
   const catalogErrorMessage = String(catalogError || "").trim();
   const catalogLoading = !catalogHydrated || (catalogRefreshing && !hasEntries);
   const { t } = useI18n();
+  const fileInputRef = useRef(null);
 
   return (
     <>
@@ -510,6 +550,43 @@ function FileViewerContents({
           aria-label={t("searchCadFiles")}
           className="h-7 text-xs md:text-xs"
         />
+        {canManageLocalFiles ? (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={localFilesBusy}
+              title={t("uploadLocalFilesHint")}
+              aria-label={t("uploadLocalFiles")}
+              className="h-7 flex-1 justify-start gap-2 px-2 text-xs"
+              onClick={() => {
+                fileInputRef.current?.click?.();
+              }}
+            >
+              <Upload className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="min-w-0 truncate">
+                {localFilesBusy ? t("uploadingFiles") : t("uploadLocalFiles")}
+              </span>
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={LOCAL_FILE_ACCEPT_ATTR}
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+              onChange={(event) => {
+                const files = Array.from(event.target.files || []);
+                event.target.value = "";
+                if (files.length > 0 && typeof onUploadLocalFiles === "function") {
+                  onUploadLocalFiles(files);
+                }
+              }}
+            />
+          </div>
+        ) : null}
       </SidebarHeader>
 
       <SidebarContent>
@@ -541,12 +618,15 @@ function FileViewerContents({
                           canRevealFileAssets={canRevealFileAssets}
                           canCopyFileAssetLinks={canCopyFileAssetLinks}
                           canCopyFileAssetPaths={canCopyFileAssetPaths}
+                          canManageLocalFiles={canManageLocalFiles}
                           fileAccessBusyKey={fileAccessBusyKey}
                           onDownloadFileAsset={onDownloadFileAsset}
                           onExportImplicitFile={onExportImplicitFile}
                           onRevealFileAsset={onRevealFileAsset}
                           onRevealInExplorerView={onRevealInExplorerView}
                           onCopyFileAssetReference={onCopyFileAssetReference}
+                          onRenameLocalEntry={onRenameLocalEntry}
+                          onDeleteLocalEntry={onDeleteLocalEntry}
                         />
                       );
                     }
@@ -568,12 +648,15 @@ function FileViewerContents({
                           canRevealFileAssets={canRevealFileAssets}
                           canCopyFileAssetLinks={canCopyFileAssetLinks}
                           canCopyFileAssetPaths={canCopyFileAssetPaths}
+                          canManageLocalFiles={canManageLocalFiles}
                           fileAccessBusyKey={fileAccessBusyKey}
                           onDownloadFileAsset={onDownloadFileAsset}
                           onExportImplicitFile={onExportImplicitFile}
                           onRevealFileAsset={onRevealFileAsset}
                           onRevealInExplorerView={onRevealInExplorerView}
                           onCopyFileAssetReference={onCopyFileAssetReference}
+                          onRenameLocalEntry={onRenameLocalEntry}
+                          onDeleteLocalEntry={onDeleteLocalEntry}
                         />
                       </SidebarMenuItem>
                     );
@@ -619,12 +702,17 @@ export default function FileViewerSidebar({
   canRevealFileAssets = false,
   canCopyFileAssetLinks = false,
   canCopyFileAssetPaths = false,
+  canManageLocalFiles = false,
+  localFilesBusy = false,
   fileAccessBusyKey = "",
   onDownloadFileAsset,
   onExportImplicitFile,
   onRevealFileAsset,
   onRevealInExplorerView,
   onCopyFileAssetReference,
+  onRenameLocalEntry,
+  onDeleteLocalEntry,
+  onUploadLocalFiles,
   catalogHydrated = false,
   catalogRefreshing = false,
   catalogError = "",
@@ -663,12 +751,17 @@ export default function FileViewerSidebar({
       canRevealFileAssets={canRevealFileAssets}
       canCopyFileAssetLinks={canCopyFileAssetLinks}
       canCopyFileAssetPaths={canCopyFileAssetPaths}
+      canManageLocalFiles={canManageLocalFiles}
+      localFilesBusy={localFilesBusy}
       fileAccessBusyKey={fileAccessBusyKey}
       onDownloadFileAsset={onDownloadFileAsset}
       onExportImplicitFile={onExportImplicitFile}
       onRevealFileAsset={onRevealFileAsset}
       onRevealInExplorerView={onRevealInExplorerView}
       onCopyFileAssetReference={onCopyFileAssetReference}
+      onRenameLocalEntry={onRenameLocalEntry}
+      onDeleteLocalEntry={onDeleteLocalEntry}
+      onUploadLocalFiles={onUploadLocalFiles}
       catalogHydrated={catalogHydrated}
       catalogRefreshing={catalogRefreshing}
       catalogError={catalogError}

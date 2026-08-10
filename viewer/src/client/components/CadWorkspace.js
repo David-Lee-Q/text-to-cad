@@ -3,6 +3,21 @@
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeftRight, ArrowRight, Circle, Eraser, Minus, PaintBucket, PenTool, Square } from "lucide-react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  requestLocalFileDelete,
+  requestLocalFileRename,
+  requestLocalFileUpload
+} from "@/workbench/localFileManagement";
 import CadRenderPane from "./workbench/CadRenderPane";
 import DxfFileSheet from "./workbench/DxfFileSheet";
 import GcodeFileSheet from "./workbench/GcodeFileSheet";
@@ -1129,6 +1144,26 @@ function normalizeViewerDirectoryOptions(viewerServerInfo) {
   return options;
 }
 
+function localTargetFileRef(target) {
+  if (!target) {
+    return "";
+  }
+  if (target.type === "directory") {
+    return String(target.id || "").trim();
+  }
+  return String(target.file || target.id || "").trim();
+}
+
+function localTargetLabel(target) {
+  if (!target) {
+    return "";
+  }
+  if (target.type === "directory") {
+    return String(target.name || "").trim();
+  }
+  return sidebarLabelForEntry(target) || String(target.file || "").split("/").pop() || "";
+}
+
 export default function CadWorkspace({
   manifestEntries: manifestEntriesProp = [],
   generationStatus = null,
@@ -1212,6 +1247,10 @@ export default function CadWorkspace({
   });
   const [screenshotStatus, setScreenshotStatus] = useState("");
   const [fileAccessBusyKey, setFileAccessBusyKey] = useState("");
+  const [localFilesBusy, setLocalFilesBusy] = useState(false);
+  const [renameLocalTarget, setRenameLocalTarget] = useState(null);
+  const [deleteLocalTarget, setDeleteLocalTarget] = useState(null);
+  const renameLocalNameInputRef = useRef(null);
   const [persistenceStatus, setPersistenceStatus] = useState("");
   const [motionErrorStatus, setMotionErrorStatus] = useState("");
   const [moveit2ServerLive, setMoveIt2ServerLive] = useState(false);
@@ -8307,6 +8346,99 @@ export default function CadWorkspace({
     selectedKey
   ]);
 
+  const handleUploadLocalFiles = useCallback(async (files) => {
+    const fileList = Array.isArray(files) ? files : [];
+    if (!fileList.length || typeof window === "undefined") {
+      return;
+    }
+    setCopyStatus("");
+    setScreenshotStatus("");
+    setLocalFilesBusy(true);
+    let uploaded = 0;
+    let firstError = "";
+    try {
+      for (const file of fileList) {
+        try {
+          await requestLocalFileUpload({ file });
+          uploaded += 1;
+        } catch (error) {
+          if (!firstError) {
+            firstError = error instanceof Error ? error.message : "Upload failed";
+          }
+        }
+      }
+      if (uploaded > 0) {
+        setCopyStatus(`Uploaded ${uploaded} file(s)`);
+      }
+      if (firstError) {
+        setPersistenceStatus(firstError);
+      }
+    } finally {
+      setLocalFilesBusy(false);
+    }
+  }, []);
+
+  const handleRenameLocalEntry = useCallback((target) => {
+    setCopyStatus("");
+    setScreenshotStatus("");
+    setRenameLocalTarget(target || null);
+  }, []);
+
+  const handleDeleteLocalEntry = useCallback((target) => {
+    setCopyStatus("");
+    setScreenshotStatus("");
+    setDeleteLocalTarget(target || null);
+  }, []);
+
+  const clearSelectionAffectedByLocalEntry = useCallback((affectedFileRef, { replacementFileRef = "" } = {}) => {
+    if (typeof window === "undefined" || !selectedKey) {
+      return;
+    }
+    const normalizedAffected = String(affectedFileRef || "").trim().replace(/\\/g, "/").replace(/^\/+/, "");
+    const current = String(selectedKey || "").trim().replace(/\\/g, "/").replace(/^\/+/, "");
+    const isAffected = normalizedAffected && (
+      current === normalizedAffected ||
+      current.startsWith(`${normalizedAffected}/`)
+    );
+    if (!isAffected) {
+      return;
+    }
+    writeCadParam(replacementFileRef, { history: "replace" });
+  }, [selectedKey, writeCadParam]);
+
+  const confirmRenameLocalEntry = useCallback(async ({ file, name }) => {
+    setRenameLocalTarget(null);
+    setLocalFilesBusy(true);
+    setCopyStatus("");
+    setScreenshotStatus("");
+    try {
+      const payload = await requestLocalFileRename({ file, name });
+      const renamedFileRef = String(payload?.fileRef || "").trim();
+      clearSelectionAffectedByLocalEntry(file, { replacementFileRef: renamedFileRef });
+      setCopyStatus(`Renamed to ${name}`);
+    } catch (error) {
+      setPersistenceStatus(error instanceof Error ? error.message : "Rename failed");
+    } finally {
+      setLocalFilesBusy(false);
+    }
+  }, [clearSelectionAffectedByLocalEntry]);
+
+  const confirmDeleteLocalEntry = useCallback(async ({ file, name }) => {
+    setDeleteLocalTarget(null);
+    setLocalFilesBusy(true);
+    setCopyStatus("");
+    setScreenshotStatus("");
+    try {
+      await requestLocalFileDelete({ file });
+      clearSelectionAffectedByLocalEntry(file);
+      setCopyStatus(`Deleted ${name}`);
+    } catch (error) {
+      setPersistenceStatus(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setLocalFilesBusy(false);
+    }
+  }, [clearSelectionAffectedByLocalEntry]);
+
   const handleDrawingStrokesChange = useCallback((nextStrokes) => {
     const normalized = cloneDrawingStrokes(nextStrokes);
     const current = drawingStrokesRef.current;
@@ -8737,12 +8869,17 @@ export default function CadWorkspace({
               canRevealFileAssets={fileRevealAvailable}
               canCopyFileAssetLinks={fileLinkCopyAvailable}
               canCopyFileAssetPaths={filePathCopyAvailable}
+              canManageLocalFiles={fileRevealAvailable}
+              localFilesBusy={localFilesBusy}
               fileAccessBusyKey={fileAccessBusyKey}
               onDownloadFileAsset={handleDownloadFileAsset}
               onExportImplicitFile={handleExportImplicitFile}
               onRevealFileAsset={handleRevealFileAsset}
               onRevealInExplorerView={handleRevealEntryInExplorerView}
               onCopyFileAssetReference={handleCopyFileAssetReference}
+              onRenameLocalEntry={handleRenameLocalEntry}
+              onDeleteLocalEntry={handleDeleteLocalEntry}
+              onUploadLocalFiles={handleUploadLocalFiles}
               catalogHydrated={catalogHydrated}
               catalogRefreshing={catalogRefreshing}
               catalogError={catalogError}
@@ -9105,6 +9242,110 @@ export default function CadWorkspace({
           previewMode={previewMode}
           setViewerAlertOpen={setViewerAlertOpen}
         />
+
+        <Dialog
+          open={Boolean(renameLocalTarget)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setRenameLocalTarget(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("renameEntryTitle", { name: localTargetLabel(renameLocalTarget) })}</DialogTitle>
+              <DialogDescription>{t("renameEntryPrompt")}</DialogDescription>
+            </DialogHeader>
+            <div className="py-2">
+              <Input
+                key={localTargetFileRef(renameLocalTarget) || "rename-target"}
+                ref={renameLocalNameInputRef}
+                defaultValue={localTargetLabel(renameLocalTarget)}
+                placeholder={t("renameEntryPlaceholder")}
+                aria-label={t("renameEntryPlaceholder")}
+                disabled={localFilesBusy}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !localFilesBusy) {
+                    const nextName = String(renameLocalNameInputRef.current?.value || "").trim();
+                    const fileRef = localTargetFileRef(renameLocalTarget);
+                    if (fileRef && nextName) {
+                      confirmRenameLocalEntry({ file: fileRef, name: nextName });
+                    }
+                  }
+                }}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={localFilesBusy}
+                onClick={() => {
+                  setRenameLocalTarget(null);
+                }}
+              >
+                {t("deleteEntryCancel")}
+              </Button>
+              <Button
+                type="button"
+                disabled={localFilesBusy}
+                onClick={() => {
+                  const nextName = String(renameLocalNameInputRef.current?.value || "").trim();
+                  const fileRef = localTargetFileRef(renameLocalTarget);
+                  if (fileRef && nextName) {
+                    confirmRenameLocalEntry({ file: fileRef, name: nextName });
+                  }
+                }}
+              >
+                {t("renameEntry")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(deleteLocalTarget)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteLocalTarget(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("deleteEntryTitle", { name: localTargetLabel(deleteLocalTarget) })}</DialogTitle>
+              <DialogDescription>{t("deleteEntryPrompt")}</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={localFilesBusy}
+                onClick={() => {
+                  setDeleteLocalTarget(null);
+                }}
+              >
+                {t("deleteEntryCancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={localFilesBusy}
+                onClick={() => {
+                  const fileRef = localTargetFileRef(deleteLocalTarget);
+                  if (fileRef) {
+                    confirmDeleteLocalEntry({
+                      file: fileRef,
+                      name: localTargetLabel(deleteLocalTarget),
+                    });
+                  }
+                }}
+              >
+                {t("deleteEntryConfirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </SidebarInset>
     </SidebarProvider>
   );

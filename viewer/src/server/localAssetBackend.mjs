@@ -20,6 +20,32 @@ import { ensureStepTopologyArtifact } from "./step/stepArtifactCompiler.mjs";
 import { exportImplicitCadFile, IMPLICIT_CAD_EXPORT_FORMATS } from "implicitjs/export";
 import { pathIsImplicitCadSource } from "implicitjs/model";
 
+export const LOCAL_FILES_DIRECTORY_NAME = "本地文件";
+export const LOCAL_FILES_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
+
+function localFilesDirectoryForRoot(rootPath) {
+  return path.join(rootPath, LOCAL_FILES_DIRECTORY_NAME);
+}
+
+function isInsideLocalFilesDirectory(rootPath, filePath) {
+  const localDir = localFilesDirectoryForRoot(rootPath);
+  return filePath === localDir || pathIsInside(filePath, localDir);
+}
+
+function normalizeLocalEntryName(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    throw new Error("Entry name is required");
+  }
+  if (raw.includes("\0") || raw.includes("/") || raw.includes("\\")) {
+    throw new Error("Entry name must not contain path separators");
+  }
+  if (raw === "." || raw === ".." || raw.startsWith(".") || raw.endsWith(".") || raw.endsWith(" ")) {
+    throw new Error("Entry name must be a single valid path segment");
+  }
+  return raw;
+}
+
 function toPosixPath(value) {
   return String(value || "").split(path.sep).join("/");
 }
@@ -958,6 +984,126 @@ export function createLocalAssetBackend({
     return candidatePath;
   }
 
+  function resolveLocalFilesContext(rootDir = defaultRootDir) {
+    const resolvedRoot = resolveRoot(effectiveRootDirForRequest(rootDir));
+    const localDir = localFilesDirectoryForRoot(resolvedRoot.rootPath);
+    return { resolvedRoot, localDir };
+  }
+
+  function requireManagedLocalEntry(fileRef, resolvedRoot, localDir) {
+    const sourcePath = filePathFromRef(fileRef, resolvedRoot);
+    if (!sourcePath) {
+      throw new Error("Missing local file reference");
+    }
+    if (!isInsideLocalFilesDirectory(resolvedRoot.rootPath, sourcePath)) {
+      throw new Error("Only entries inside the Local Files directory can be managed");
+    }
+    if (sourcePath === localDir) {
+      throw new Error("The Local Files directory itself cannot be modified");
+    }
+    if (!fs.existsSync(sourcePath)) {
+      throw new Error(`Entry not found: ${fileRef}`);
+    }
+    return sourcePath;
+  }
+
+  async function uploadLocalFile({ rootDir, filename = "", body } = {}) {
+    const { resolvedRoot, localDir } = resolveLocalFilesContext(rootDir);
+    const name = normalizeLocalEntryName(filename);
+    const filePath = path.resolve(localDir, name);
+    if (!isInsideLocalFilesDirectory(resolvedRoot.rootPath, filePath)) {
+      throw new Error("Upload target is outside the Local Files directory");
+    }
+    if (!isServedCadAsset(filePath)) {
+      throw new Error(`Unsupported CAD file format: ${name}`);
+    }
+    const bytes = Buffer.isBuffer(body) ? body : Buffer.from(body || "");
+    if (bytes.length > LOCAL_FILES_MAX_UPLOAD_BYTES) {
+      throw new Error(`Upload exceeds the maximum allowed size of ${Math.floor(LOCAL_FILES_MAX_UPLOAD_BYTES / (1024 * 1024))}MB`);
+    }
+    fs.mkdirSync(localDir, { recursive: true });
+    fs.writeFileSync(filePath, bytes);
+    const nextCatalog = refreshCatalogForPath({ rootDir: resolvedRoot.dir, filePath });
+    const fileRef = relativeFileRef(resolvedRoot.rootPath, filePath);
+    return {
+      fileRef,
+      path: filePath,
+      filename: path.basename(filePath),
+      bytes: bytes.length,
+      catalog: nextCatalog,
+      entry: catalogEntryForFileRef(nextCatalog, fileRef),
+    };
+  }
+
+  function renameLocalEntry({ rootDir, fileRef, name = "" } = {}) {
+    const { resolvedRoot, localDir } = resolveLocalFilesContext(rootDir);
+    const sourcePath = requireManagedLocalEntry(fileRef, resolvedRoot, localDir);
+    const nextName = normalizeLocalEntryName(name);
+    const nextPath = path.join(path.dirname(sourcePath), nextName);
+    if (!isInsideLocalFilesDirectory(resolvedRoot.rootPath, nextPath)) {
+      throw new Error("Rename target is outside the Local Files directory");
+    }
+    if (nextPath !== sourcePath) {
+      if (fs.existsSync(nextPath)) {
+        throw new Error(`An entry named "${nextName}" already exists`);
+      }
+      fs.renameSync(sourcePath, nextPath);
+    }
+    const isDirectory = fs.statSync(nextPath).isDirectory();
+    let nextCatalog = null;
+    if (isDirectory) {
+      nextCatalog = refreshCatalog({ rootDir: resolvedRoot.dir });
+    } else {
+      const context = scanContextForRoot(resolvedRoot);
+      const currentCatalog = readCatalog({ rootDir: resolvedRoot.dir });
+      const newRawEntry = scanCadFile({
+        repoRoot: context.scanRepoRoot,
+        rootDir: context.scanRootDir,
+        filePath: nextPath,
+        includeArtifactStatus: false,
+      });
+      let updatedCatalog = replaceCatalogEntry(currentCatalog, absoluteFileRef(sourcePath), null);
+      if (newRawEntry) {
+        const absEntry = absolutizeCatalogEntry(newRawEntry, context);
+        updatedCatalog = replaceCatalogEntry(updatedCatalog, absEntry.file, absEntry);
+      }
+      catalogCache.set(`dir:${resolvedRoot.dir}`, updatedCatalog);
+      nextCatalog = updatedCatalog;
+    }
+    const nextFileRef = relativeFileRef(resolvedRoot.rootPath, nextPath);
+    return {
+      fileRef: nextFileRef,
+      path: nextPath,
+      filename: path.basename(nextPath),
+      catalog: nextCatalog,
+      entry: catalogEntryForFileRef(nextCatalog, nextFileRef),
+    };
+  }
+
+  function deleteLocalEntry({ rootDir, fileRef } = {}) {
+    const { resolvedRoot, localDir } = resolveLocalFilesContext(rootDir);
+    const sourcePath = requireManagedLocalEntry(fileRef, resolvedRoot, localDir);
+    const isDirectory = fs.statSync(sourcePath).isDirectory();
+    if (isDirectory) {
+      fs.rmSync(sourcePath, { recursive: true, force: false });
+      const nextCatalog = refreshCatalog({ rootDir: resolvedRoot.dir });
+      return {
+        fileRef: relativeFileRef(resolvedRoot.rootPath, sourcePath),
+        ok: true,
+        catalog: nextCatalog,
+      };
+    }
+    fs.unlinkSync(sourcePath);
+    const currentCatalog = readCatalog({ rootDir: resolvedRoot.dir });
+    const nextCatalog = replaceCatalogEntry(currentCatalog, absoluteFileRef(sourcePath), null);
+    catalogCache.set(`dir:${resolvedRoot.dir}`, nextCatalog);
+    return {
+      fileRef: relativeFileRef(resolvedRoot.rootPath, sourcePath),
+      ok: true,
+      catalog: nextCatalog,
+    };
+  }
+
   async function writeAsset({ fileRef, body, resolvedRoot = resolveRequestRoot({ fileRef }) } = {}) {
     const normalizedRef = normalizedFileRef(fileRef);
     if (!normalizedRef) {
@@ -1007,6 +1153,10 @@ export function createLocalAssetBackend({
     entryForSourcePath,
     assetPathForFileRef,
     writeAsset,
+    uploadLocalFile,
+    renameLocalEntry,
+    deleteLocalEntry,
+    localFilesDirectoryName: LOCAL_FILES_DIRECTORY_NAME,
     contentTypeForPath,
   };
 }

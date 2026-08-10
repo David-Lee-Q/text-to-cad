@@ -122,6 +122,26 @@ function readJsonBody(req, { limitBytes = 256 * 1024 } = {}) {
   });
 }
 
+function readRawBody(req, { limitBytes = 256 * 1024 * 1024 } = {}) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let received = 0;
+    req.on("data", (chunk) => {
+      received += chunk.length;
+      if (received > limitBytes) {
+        reject(new Error("Request body is too large"));
+        req.destroy?.();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("error", reject);
+    req.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+  });
+}
+
 function fileAssetRequest(backend, requestUrl, {
   rootDir,
   catalog,
@@ -568,6 +588,76 @@ export function createCadViewerApiMiddleware({
         });
       } catch (error) {
         sendJson(res, 400, {
+          error: errorMessage(error),
+        });
+      }
+      return;
+    }
+    if (requestUrl.pathname === "/__cad/local-upload" || requestUrl.pathname === "/__cad/local-rename" || requestUrl.pathname === "/__cad/local-delete") {
+      if (req.method !== "POST") {
+        res.setHeader("allow", "POST");
+        sendJson(res, 405, {
+          error: "Use POST to manage Local Files entries",
+        });
+        return;
+      }
+      if (backend.kind !== "local-fs") {
+        sendJson(res, 405, {
+          error: "Local Files management is only available for the local filesystem backend",
+        });
+        return;
+      }
+      try {
+        const resolvedRoot = typeof backend.resolveRequestRoot === "function"
+          ? backend.resolveRequestRoot({ rootDir: activeRootDir, fileRef: activeFileRef })
+          : backend.resolveRoot(activeRootDir);
+        let result = null;
+        if (requestUrl.pathname === "/__cad/local-upload") {
+          if (typeof backend.uploadLocalFile !== "function") {
+            sendJson(res, 405, {
+              error: "Uploads are not available for this CAD Viewer backend",
+            });
+            return;
+          }
+          const filename = String(requestUrl.searchParams.get("filename") || "").trim();
+          const body = await readRawBody(req);
+          result = await backend.uploadLocalFile({ rootDir: activeRootDir, filename, body });
+        } else if (requestUrl.pathname === "/__cad/local-rename") {
+          if (typeof backend.renameLocalEntry !== "function") {
+            sendJson(res, 405, {
+              error: "Renaming is not available for this CAD Viewer backend",
+            });
+            return;
+          }
+          const body = await readJsonBody(req);
+          result = await backend.renameLocalEntry({
+            rootDir: activeRootDir,
+            fileRef: body.file || activeFileRef,
+            name: body.name,
+          });
+        } else {
+          if (typeof backend.deleteLocalEntry !== "function") {
+            sendJson(res, 405, {
+              error: "Deleting is not available for this CAD Viewer backend",
+            });
+            return;
+          }
+          const body = await readJsonBody(req);
+          result = await backend.deleteLocalEntry({
+            rootDir: activeRootDir,
+            fileRef: body.file || activeFileRef,
+          });
+        }
+        onCatalogChanged(resolvedRoot);
+        const nextCatalog = result?.catalog || await backend.readCatalog({ rootDir: activeRootDir, fileRef: activeFileRef });
+        sendJson(res, 200, {
+          ok: true,
+          ...result,
+          catalog: nextCatalog,
+        });
+      } catch (error) {
+        sendJson(res, 400, {
+          ok: false,
           error: errorMessage(error),
         });
       }

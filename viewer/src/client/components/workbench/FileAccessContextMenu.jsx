@@ -7,7 +7,49 @@ import {
 } from "@/components/ui/context-menu";
 import { fileAccessAssetsForEntry } from "@/workbench/fileAccessAssets";
 import { IMPLICIT_EXPORT_FORMATS } from "@/workbench/implicitExport";
+import { isLocalManagedEntryFile } from "@/workbench/localFileManagement";
 import { useI18n } from "@/i18n";
+
+function LocalFilesManagementSection({
+  entry,
+  onRenameLocalEntry,
+  onDeleteLocalEntry
+}) {
+  const { t } = useI18n();
+  if (
+    !entry ||
+    !isLocalManagedEntryFile(entry?.file) ||
+    (typeof onRenameLocalEntry !== "function" && typeof onDeleteLocalEntry !== "function")
+  ) {
+    return null;
+  }
+
+  return (
+    <>
+      <ContextMenuSeparator />
+      {typeof onRenameLocalEntry === "function" ? (
+        <ContextMenuItem
+          className="text-xs"
+          onSelect={() => {
+            onRenameLocalEntry(entry);
+          }}
+        >
+          <span className="min-w-0 truncate">{t("renameEntry")}</span>
+        </ContextMenuItem>
+      ) : null}
+      {typeof onDeleteLocalEntry === "function" ? (
+        <ContextMenuItem
+          className="text-xs"
+          onSelect={() => {
+            onDeleteLocalEntry(entry);
+          }}
+        >
+          <span className="min-w-0 truncate">{t("deleteEntry")}</span>
+        </ContextMenuItem>
+      ) : null}
+    </>
+  );
+}
 
 function ExplorerViewSection({
   entry,
@@ -25,7 +67,7 @@ function ExplorerViewSection({
         onRevealInExplorerView(entry);
       }}
     >
-      <span className="min-w-0 truncate">{t("revealInExplorerView")}}</span>
+      <span className="min-w-0 truncate">{t("revealInExplorerView")}</span>
     </ContextMenuItem>
   );
 }
@@ -61,7 +103,7 @@ function FileAccessSection({
             onRevealFileAsset(entry, asset.asset, asset);
           }}
         >
-          <span className="min-w-0 truncate">{t("revealInFolder")}}</span>
+          <span className="min-w-0 truncate">{t("revealInFolder")}</span>
         </ContextMenuItem>
       ) : null}
       <ExplorerViewSection
@@ -76,7 +118,7 @@ function FileAccessSection({
               onCopyFileAssetReference(entry, asset.asset, asset, "path");
             }}
           >
-            <span className="min-w-0 truncate">{t("copyPath")}}</span>
+            <span className="min-w-0 truncate">{t("copyPath")}</span>
           </ContextMenuItem>
           <ContextMenuItem
             className="text-xs"
@@ -84,7 +126,7 @@ function FileAccessSection({
               onCopyFileAssetReference(entry, asset.asset, asset, "relativePath");
             }}
           >
-            <span className="min-w-0 truncate">{t("copyRelativePath")}}</span>
+            <span className="min-w-0 truncate">{t("copyRelativePath")}</span>
           </ContextMenuItem>
         </>
       ) : null}
@@ -95,7 +137,7 @@ function FileAccessSection({
             onCopyFileAssetReference(entry, asset.asset, asset, "link");
           }}
         >
-          <span className="min-w-0 truncate">{t("copyLink")}}</span>
+          <span className="min-w-0 truncate">{t("copyLink")}</span>
         </ContextMenuItem>
       ) : null}
       <ContextMenuItem
@@ -104,7 +146,7 @@ function FileAccessSection({
           onDownloadFileAsset(entry, asset.asset, asset);
         }}
       >
-        <span className="min-w-0 truncate">{t("download")}}</span>
+        <span className="min-w-0 truncate">{t("download")}</span>
       </ContextMenuItem>
     </>
   );
@@ -150,12 +192,15 @@ export default function FileAccessContextMenu({
   canRevealFileAssets = false,
   canCopyFileAssetLinks = false,
   canCopyFileAssetPaths = false,
+  canManageLocalFiles = false,
   busyKey = "",
   onDownloadFileAsset,
   onExportImplicitFile,
   onRevealFileAsset,
   onRevealInExplorerView,
   onCopyFileAssetReference,
+  onRenameLocalEntry,
+  onDeleteLocalEntry,
   children
 }) {
   const { t } = useI18n();
@@ -163,12 +208,16 @@ export default function FileAccessContextMenu({
   const assetActionsAvailable = entry && typeof onDownloadFileAsset === "function";
   const implicitExportAvailable = entry && typeof onExportImplicitFile === "function" &&
     String(entry?.kind || "").trim().toLowerCase() === "implicit";
-  if (!revealInExplorerViewAvailable && !assetActionsAvailable && !implicitExportAvailable) {
+  const localManagementAvailable = canManageLocalFiles &&
+    entry &&
+    isLocalManagedEntryFile(entry?.file) &&
+    (typeof onRenameLocalEntry === "function" || typeof onDeleteLocalEntry === "function");
+  if (!revealInExplorerViewAvailable && !assetActionsAvailable && !implicitExportAvailable && !localManagementAvailable) {
     return children;
   }
 
   const assets = fileAccessAssetsForEntry(entry);
-  if (!revealInExplorerViewAvailable && !assets.output && !implicitExportAvailable) {
+  if (!revealInExplorerViewAvailable && !assets.output && !implicitExportAvailable && !localManagementAvailable) {
     return children;
   }
 
@@ -202,6 +251,11 @@ export default function FileAccessContextMenu({
           entry={entry}
           busyKey={busyKey}
           onExportImplicitFile={onExportImplicitFile}
+        />
+        <LocalFilesManagementSection
+          entry={entry}
+          onRenameLocalEntry={onRenameLocalEntry}
+          onDeleteLocalEntry={onDeleteLocalEntry}
         />
       </ContextMenuContent>
     </ContextMenu>

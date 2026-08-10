@@ -181,8 +181,10 @@ export default function AIChatDrawer({
     text: t("aiGreeting")
   }]);
   const [input, setInput] = useState("");
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
+  const activeRowRef = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -242,6 +244,42 @@ export default function AIChatDrawer({
     parameters: context.parameters || [],
     lang
   });
+  const commandQuery = showCommands ? input.trim().slice(1).toLowerCase() : "";
+  const filteredRows = commandQuery
+    ? commandRows.filter((row) =>
+        row.zh.toLowerCase().includes(commandQuery) ||
+        row.en.toLowerCase().includes(commandQuery) ||
+        row.command.toLowerCase().includes(commandQuery)
+      )
+    : commandRows;
+
+  useEffect(() => {
+    setActiveCommandIndex(0);
+  }, [commandQuery]);
+
+  useEffect(() => {
+    activeRowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [activeCommandIndex]);
+
+  const handleInputKeyDown = (event) => {
+    if (!showCommands || filteredRows.length === 0) {
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveCommandIndex((index) => (index + 1) % filteredRows.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveCommandIndex((index) => (index - 1 + filteredRows.length) % filteredRows.length);
+    } else if (event.key === "Enter" && filteredRows[activeCommandIndex]) {
+      event.preventDefault();
+      handleCommandClick(filteredRows[activeCommandIndex].command);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setInput("");
+    }
+  };
+
   const GROUP_LABELS = {
     file: t("aiCmdGroupFile"),
     param: t("aiCmdGroupParam")
@@ -310,45 +348,59 @@ export default function AIChatDrawer({
           ) : null}
 
           {showCommands ? (
-            <div className="shrink-0 overflow-hidden rounded-md border border-sidebar-border">
+            <div id="ai-command-suggestions" className="shrink-0 overflow-hidden rounded-md border border-sidebar-border">
               <div className="border-b border-sidebar-border bg-sidebar-accent/40 px-4 py-1.5 text-[11px] font-medium text-muted-foreground">
                 {t("aiCmdListTitle")}
               </div>
-              <ScrollArea className="h-52" type="auto">
-                <table className="w-full text-left text-xs">
-                  <tbody>
-                    {commandRows.map((row, index) => {
-                      const groupChanged = row.group !== commandRows[index - 1]?.group;
-                      return (
-                        <Fragment key={row.key}>
-                          {groupChanged && row.group ? (
-                            <tr className="border-b border-sidebar-border/50 bg-sidebar-accent/60">
-                              <td colSpan={2} className="px-4 py-1 text-[11px] font-medium text-muted-foreground">
-                                {GROUP_LABELS[row.group]}
-                              </td>
+              {filteredRows.length === 0 ? (
+                <div className="px-4 py-3 text-xs text-muted-foreground">
+                  {t("aiCmdNoMatch", { query: input.trim() })}
+                </div>
+              ) : (
+                <ScrollArea viewportClassName="max-h-52" type="auto">
+                  <table className="w-full text-left text-xs">
+                    <tbody>
+                      {filteredRows.map((row, index) => {
+                        const groupChanged = row.group !== filteredRows[index - 1]?.group;
+                        const isActive = index === activeCommandIndex;
+                        return (
+                          <Fragment key={row.key}>
+                            {groupChanged && row.group ? (
+                              <tr className="border-b border-sidebar-border/50 bg-sidebar-accent/60">
+                                <td colSpan={2} className="px-4 py-1 text-[11px] font-medium text-muted-foreground">
+                                  {GROUP_LABELS[row.group]}
+                                </td>
+                              </tr>
+                            ) : null}
+                            <tr
+                              ref={isActive ? activeRowRef : undefined}
+                              className={`group cursor-pointer border-b border-sidebar-border/50 last:border-0 ${
+                                isActive
+                                  ? "bg-sidebar-accent"
+                                  : "hover:bg-sidebar-accent/60"
+                              }`}
+                              onClick={() => handleCommandClick(row.command)}
+                              role="button"
+                              tabIndex={0}
+                              aria-selected={isActive}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  handleCommandClick(row.command);
+                                }
+                              }}
+                              onMouseEnter={() => setActiveCommandIndex(index)}
+                            >
+                              <td className="px-4 py-1.5 font-mono text-foreground">{row.zh}</td>
+                              <td className="px-4 py-1.5 font-mono text-muted-foreground">{row.en}</td>
                             </tr>
-                          ) : null}
-                          <tr
-                            className="group cursor-pointer border-b border-sidebar-border/50 last:border-0 hover:bg-sidebar-accent/60"
-                            onClick={() => handleCommandClick(row.command)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                handleCommandClick(row.command);
-                              }
-                            }}
-                          >
-                            <td className="px-4 py-1.5 font-mono text-foreground">{row.zh}</td>
-                            <td className="px-4 py-1.5 font-mono text-muted-foreground">{row.en}</td>
-                          </tr>
-                        </Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </ScrollArea>
+                          </Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </ScrollArea>
+              )}
             </div>
           ) : null}
 
@@ -363,8 +415,11 @@ export default function AIChatDrawer({
               ref={inputRef}
               value={input}
               onChange={(event) => setInput(event.target.value)}
+              onKeyDown={handleInputKeyDown}
               placeholder={t("aiPlaceholder")}
               aria-label={t("aiPlaceholder")}
+              aria-expanded={showCommands}
+              aria-controls="ai-command-suggestions"
               className="h-9 text-[13px]"
             />
             <Button

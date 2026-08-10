@@ -216,6 +216,13 @@ const HELP_DOCUMENT = {
             ]
           },
           {
+            title: "Local Files Management",
+            blocks: [
+              { type: "p", text: "Use the upload button at the bottom of the sidebar to add STEP, STL, 3MF, GLB, G-code, DXF, URDF/SRDF/SDF or Implicit CAD files (up to 200MB each). Uploaded files are stored in a dedicated \"Local Files\" folder and can be renamed or deleted from its context menu. Built-in files are read-only." },
+              { type: "image", src: "/help-screenshots/10-local-files.png", alt: "Local Files context menu with rename and delete" }
+            ]
+          },
+          {
             title: "Metadata and Issues",
             blocks: [
               { type: "p", text: "The file panel lists metadata groups with copy buttons. The status section lists issues and warnings with severity badges so you can review and report problems." }
@@ -452,6 +459,13 @@ const HELP_DOCUMENT = {
             title: "文件右键菜单",
             blocks: [
               { type: "p", text: "右键侧边栏中的文件可执行：在文件夹中显示、复制路径、复制相对路径、复制链接与下载。" }
+            ]
+          },
+          {
+            title: "本地文件管理",
+            blocks: [
+              { type: "p", text: "使用侧边栏底部的上传按钮可添加 STEP、STL、3MF、GLB、G-code、DXF、URDF/SRDF/SDF 或隐式 CAD 文件（单文件上限 200MB）。上传的文件保存在独立的“本地文件”文件夹中，可在其右键菜单中重命名或删除。内置文件为只读，不可修改。" },
+              { type: "image", src: "/help-screenshots/10-local-files.png", alt: "本地文件右键菜单，包含重命名与删除" }
             ]
           },
           {

@@ -1,0 +1,42 @@
+[
+ {
+  "hash": "3c7b204",
+  "date": "2026-08-10 15:37:08",
+  "message": "fix(viewer): 本地文件重命名后残留幽灵条目"
+ },
+ {
+  "hash": "4f94548",
+  "date": "2026-08-10 15:17:28",
+  "message": "feat(viewer): Top bar 系统名称、首页文件筛选与上传、本地文件目录置顶"
+ },
+ {
+  "hash": "2403c3c",
+  "date": "2026-08-10 15:08:10",
+  "message": "docs(viewer): 帮助文档新增本地文件上传与管理章节"
+ },
+ {
+  "hash": "7db2a4b",
+  "date": "2026-08-10 15:02:15",
+  "message": "feat(viewer): 本地文件上传与管理（重命名/删除）"
+ },
+ {
+  "hash": "f844470",
+  "date": "2026-08-10 13:44:22",
+  "message": "docs(viewer): 帮助文档接入各界面操作截图"
+ },
+ {
+  "hash": "a1f5b74",
+  "date": "2026-08-10 13:20:57",
+  "message": "feat(viewer): 帮助文档页面与 Top bar 帮助入口"
+ },
+ {
+  "hash": "0cd1496",
+  "date": "2026-08-10 11:33:34",
+  "message": "feat(viewer): 全局中英文语言切换 i18n 支持"
+ },
+ {
+  "hash": "4fd71ea",
+  "date": "2026-07-31 14:25:02",
+  "message": "Publish 0.3.13 from develop to main"
+ }
+]

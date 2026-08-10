@@ -897,165 +897,115 @@ function VersionTooltipRow({ label, version, action = null }) {
   );
 }
 
-function VersionReleaseLink({ version, releaseUrl, releaseCheck = emptyLatestReleaseCheck }) {
-  const normalizedVersion = String(version || "").trim();
+function GitLogTooltip() {
   const { t } = useI18n();
-  const [installCopyStatus, setInstallCopyStatus] = useState("");
-  const copyGestureHandledRef = useRef(false);
+  const [records, setRecords] = useState(null);
 
-  if (!normalizedVersion) {
-    return null;
+  useEffect(() => {
+    let cancelled = false;
+    fetch("git-log.json", { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Git history fetch failed with ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (!cancelled) {
+          setRecords(Array.isArray(data) ? data : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRecords([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (records === null) {
+    return (
+      <div className="text-[11px] text-muted-foreground">{t("gitLogLoading")}</div>
+    );
   }
 
-  const updateAvailable = Boolean(releaseCheck?.updateAvailable);
-  const targetReleaseUrl = updateAvailable
-    ? String(releaseCheck?.releaseUrl || releaseUrl || "").trim()
-    : String(releaseUrl || "").trim();
-  const latestVersion = String(releaseCheck?.latestVersion || "").trim();
-  const latestReleaseNewer = Boolean(releaseCheck?.latestReleaseNewer);
-  const latestVersionVisible = latestVersion && latestReleaseNewer;
-  const latestReleaseUrl = latestVersionVisible
-    ? String(releaseCheck?.releaseUrl || "").trim()
-    : "";
-  const installCommand = String(
-    releaseCheck?.installCommand || DEFAULT_VIEWER_SKILLS_INSTALL_COMMAND
-  ).trim() || DEFAULT_VIEWER_SKILLS_INSTALL_COMMAND;
-  const upToDate = Boolean(latestVersion) && !latestReleaseNewer;
-  const label = updateAvailable
-    ? t("updateCadViewer")
-    : (targetReleaseUrl ? t("openRelease", { version: normalizedVersion }) : t("versionLabel", { version: normalizedVersion }));
-
-  const handleCopyInstallCommand = async (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (copyGestureHandledRef.current) {
-      return;
-    }
-    copyGestureHandledRef.current = true;
-    globalThis.setTimeout(() => {
-      copyGestureHandledRef.current = false;
-    }, 250);
-    try {
-      await copyTextToClipboard(installCommand);
-      setInstallCopyStatus("copied");
-      globalThis.setTimeout(() => {
-        setInstallCopyStatus("");
-      }, 1600);
-    } catch {
-      setInstallCopyStatus("failed");
-    }
-  };
-
-  const releaseButton = (
-    <Button
-      asChild={Boolean(targetReleaseUrl)}
-      variant={updateAvailable ? "default" : "ghost"}
-      size="xs"
-      className={cn(
-        "inline-flex rounded-sm px-2 text-xs font-medium leading-none",
-        updateAvailable
-          ? "h-6 px-2 text-[11px]"
-          : "h-7 text-muted-foreground tabular-nums hover:text-sidebar-foreground"
-      )}
-      aria-label={label}
-    >
-      {targetReleaseUrl ? (
-        <a href={targetReleaseUrl} target="_blank" rel="noreferrer">
-          <span className="inline-flex items-center gap-1">
-            {updateAvailable ? (
-              <span>{t("update")}</span>
-            ) : (
-              <span>{normalizedVersion}</span>
-            )}
-          </span>
-        </a>
-      ) : (
-        <span className="inline-flex items-center gap-1">
-          {updateAvailable ? (
-            <span>{t("update")}</span>
-          ) : (
-            <span>{normalizedVersion}</span>
-          )}
-        </span>
-      )}
-    </Button>
-  );
+  if (!records.length) {
+    return (
+      <div className="text-[11px] text-muted-foreground">{t("gitLogEmpty")}</div>
+    );
+  }
 
   return (
-    <Tooltip delayDuration={updateAvailable ? updateVersionTooltipDelayMs : passiveVersionTooltipDelayMs}>
+    <div className="inline-flex max-w-full flex-col gap-1.5">
+      <div className="px-0.5 text-[11px] font-medium leading-none text-muted-foreground">
+        {t("gitLogTitle")}
+      </div>
+      <ScrollArea
+        className="max-h-72 w-full"
+        type="auto"
+        viewportClassName="max-h-72"
+      >
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {records.map((record, index) => {
+            const message = String(record?.message || "").trim();
+            const date = String(record?.date || "").trim();
+            const hash = String(record?.hash || "").trim();
+            const isLatest = index === 0;
+            return (
+              <div
+                key={`${record?.hash || index}:${index}`}
+                className={cn(
+                  "flex min-w-0 items-baseline gap-2 rounded-sm px-0.5 py-1 text-left",
+                  isLatest && "bg-primary/10"
+                )}
+              >
+                <span
+                  className={cn(
+                    "min-w-0 flex-1 truncate font-mono text-[11px] leading-5",
+                    isLatest ? "font-bold text-primary" : "text-foreground"
+                  )}
+                >
+                  {message || "—"}
+                </span>
+                <span className="shrink-0 text-[10px] leading-5 text-muted-foreground tabular-nums">
+                  {date}
+                </span>
+                <span className="shrink-0 font-mono text-[10px] leading-5 text-muted-foreground">
+                  {hash}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+function VersionReleaseLink() {
+  const versionLabel = "V1.0.1";
+  return (
+    <Tooltip delayDuration={passiveVersionTooltipDelayMs}>
       <TooltipTrigger asChild>
-        {releaseButton}
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          className="h-7 text-muted-foreground tabular-nums hover:text-sidebar-foreground"
+          aria-label={versionLabel}
+        >
+          <span className="inline-flex items-center gap-1">{versionLabel}</span>
+        </Button>
       </TooltipTrigger>
       <TooltipContent
         side="bottom"
         sideOffset={6}
-        className="cad-glass-popover w-fit max-w-[calc(100vw-1rem)] border border-border bg-popover p-2 text-left text-popover-foreground shadow-lg shadow-black/10"
+        className="cad-glass-popover w-fit max-w-[min(30rem,calc(100vw-1rem))] border border-border bg-popover p-2 text-left text-popover-foreground shadow-lg shadow-black/10"
         arrowClassName="bg-popover fill-popover"
       >
-        <div className="inline-flex max-w-full flex-col gap-3">
-          {latestVersionVisible ? (
-            <div className="grid w-full min-w-0 grid-cols-2 gap-3">
-              <VersionTooltipRow
-                label={t("currentVersion")}
-                version={normalizedVersion}
-              />
-              <VersionTooltipRow
-                label={t("latestVersion")}
-                version={latestVersion}
-                action={latestReleaseUrl ? (
-                  <Button
-                    asChild
-                    variant="default"
-                    size="xs"
-                    className="h-4 !min-h-0 rounded-sm !px-1.5 !py-0 text-[10px] font-medium leading-none"
-                    aria-label={t("updateToVersion", { version: latestVersion })}
-                  >
-                    <a href={latestReleaseUrl} target="_blank" rel="noreferrer">
-                      {t("update")}
-                    </a>
-                  </Button>
-                ) : null}
-              />
-            </div>
-          ) : (
-            <VersionTooltipRow
-              label={t("currentVersion")}
-              version={normalizedVersion}
-            />
-          )}
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="px-0.5 text-[11px] font-medium leading-none text-muted-foreground">{t("updateCommand")}</div>
-            <div className="flex h-8 min-w-0 items-center gap-2 rounded-sm border border-border/60 bg-muted/35 p-1 pl-2">
-              <code className="min-w-0 flex-1 whitespace-nowrap font-mono text-[11px] leading-5 text-foreground">
-                {installCommand}
-              </code>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm border border-border text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={installCopyStatus === "copied" ? t("installCommandCopied") : t("copyInstallCommand")}
-                onPointerDown={handleCopyInstallCommand}
-                onClick={handleCopyInstallCommand}
-              >
-                {installCopyStatus === "copied" ? (
-                  <Check className="size-3" aria-hidden="true" />
-                ) : (
-                  <Copy className="size-3" aria-hidden="true" />
-                )}
-              </Button>
-            </div>
-          </div>
-          {installCopyStatus === "failed" ? (
-            <div className="text-[11px] text-muted-foreground">{t("copyFailed")}</div>
-          ) : null}
-          {upToDate ? (
-            <div className="flex items-center gap-1.5 px-0.5 text-[11px] font-medium text-muted-foreground">
-              <CircleCheck className="size-3 text-primary" aria-hidden="true" />
-              <span>{t("youAreUpToDate")}</span>
-            </div>
-          ) : null}
-        </div>
+        <GitLogTooltip />
       </TooltipContent>
     </Tooltip>
   );
@@ -1301,11 +1251,7 @@ export default function CadWorkspaceTopBar({
         <div className="flex shrink-0 items-center gap-1.5">
           <HelpButton />
           <LanguageToggle />
-          <VersionReleaseLink
-            version={viewerVersion}
-            releaseUrl={releaseUrl}
-            releaseCheck={releaseCheck}
-          />
+          <VersionReleaseLink />
           <Button
             asChild
             variant="ghost"

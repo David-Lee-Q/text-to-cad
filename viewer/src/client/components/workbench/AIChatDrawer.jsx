@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Bot, CornerDownLeft, SendHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import {
   SheetTitle
 } from "@/components/ui/sheet";
 import { RENDER_FORMAT } from "@/workbench/constants";
-import { AI_COMMAND_ROWS, AI_INTENTS, parseAiCommand } from "@/workbench/aiCommands";
+import { AI_INTENTS, buildCommandRows, parseAiCommand } from "@/workbench/aiCommands";
 import { useI18n } from "@/i18n";
 
 function isStepLike(sourceFormat) {
@@ -173,7 +173,7 @@ export default function AIChatDrawer({
   actions = {},
   context = {}
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [messages, setMessages] = useState(() => [{
     id: "greeting",
     role: "assistant",
@@ -182,6 +182,7 @@ export default function AIChatDrawer({
   }]);
   const [input, setInput] = useState("");
   const scrollRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -197,12 +198,12 @@ export default function AIChatDrawer({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
 
-  const sendMessage = () => {
-    const text = input.trim();
-    if (!text) {
+  const sendCommand = (text) => {
+    const trimmed = String(text || "").trim();
+    if (!trimmed) {
       return;
     }
-    const parsed = parseAiCommand(text, {
+    const parsed = parseAiCommand(trimmed, {
       sourceFormat: context.sourceFormat,
       catalog: context.catalog || [],
       parameters: context.parameters || []
@@ -215,14 +216,36 @@ export default function AIChatDrawer({
     }
     setMessages((current) => [
       ...current,
-      { id: `u-${Date.now()}`, role: "user", text },
+      { id: `u-${Date.now()}`, role: "user", text: trimmed },
       { id: `a-${Date.now() + 1}`, role: "assistant", kind: reply.kind, text: reply.text }
     ]);
     setInput("");
   };
 
+  const sendMessage = () => {
+    sendCommand(input);
+  };
+
+  const handleCommandClick = (command) => {
+    if (command.includes("<") || command.endsWith(" ")) {
+      setInput(command);
+      inputRef.current?.focus();
+      return;
+    }
+    sendCommand(command);
+  };
+
   const hasFile = Boolean(context?.fileName);
   const showCommands = input.trim().startsWith("/");
+  const commandRows = buildCommandRows({
+    catalog: context.catalog || [],
+    parameters: context.parameters || [],
+    lang
+  });
+  const GROUP_LABELS = {
+    file: t("aiCmdGroupFile"),
+    param: t("aiCmdGroupParam")
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -294,15 +317,35 @@ export default function AIChatDrawer({
               <ScrollArea className="max-h-52" type="auto">
                 <table className="w-full text-left text-xs">
                   <tbody>
-                    {AI_COMMAND_ROWS.map((row) => (
-                      <tr
-                        key={`${row.zh}-${row.en}`}
-                        className="border-b border-sidebar-border/50 last:border-0"
-                      >
-                        <td className="px-4 py-1.5 font-mono text-foreground">{row.zh}</td>
-                        <td className="px-4 py-1.5 font-mono text-muted-foreground">{row.en}</td>
-                      </tr>
-                    ))}
+                    {commandRows.map((row, index) => {
+                      const groupChanged = row.group !== commandRows[index - 1]?.group;
+                      return (
+                        <Fragment key={row.key}>
+                          {groupChanged && row.group ? (
+                            <tr className="border-b border-sidebar-border/50 bg-sidebar-accent/60">
+                              <td colSpan={2} className="px-4 py-1 text-[11px] font-medium text-muted-foreground">
+                                {GROUP_LABELS[row.group]}
+                              </td>
+                            </tr>
+                          ) : null}
+                          <tr
+                            className="group cursor-pointer border-b border-sidebar-border/50 last:border-0 hover:bg-sidebar-accent/60"
+                            onClick={() => handleCommandClick(row.command)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                handleCommandClick(row.command);
+                              }
+                            }}
+                          >
+                            <td className="px-4 py-1.5 font-mono text-foreground">{row.zh}</td>
+                            <td className="px-4 py-1.5 font-mono text-muted-foreground">{row.en}</td>
+                          </tr>
+                        </Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </ScrollArea>
@@ -317,6 +360,7 @@ export default function AIChatDrawer({
             }}
           >
             <Input
+              ref={inputRef}
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder={t("aiPlaceholder")}

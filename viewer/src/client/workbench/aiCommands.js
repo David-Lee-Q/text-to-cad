@@ -39,30 +39,75 @@ export const PROJECTION_OPTIONS = Object.freeze([
   { zh: "透视", en: "perspective" }
 ]);
 
+const MODE_ROWS = DISPLAY_MODE_OPTIONS.map((option) => ({
+  zh: option.zh,
+  en: option.en,
+  commandZh: `设置显示模式 ${option.zh}`,
+  commandEn: `set display mode ${option.en}`
+}));
+
+const PROJECTION_ROWS = PROJECTION_OPTIONS.map((option) => ({
+  zh: option.zh,
+  en: option.en,
+  commandZh: `设置投影 ${option.zh}`,
+  commandEn: `set projection ${option.en}`
+}));
+
 export const AI_COMMAND_ROWS = Object.freeze([
-  { zh: "帮助", en: "help" },
-  { zh: "打开 <文件名>", en: "open <file name>" },
-  { zh: "设置显示模式 <模式>", en: "set display mode <mode>" },
-  ...DISPLAY_MODE_OPTIONS,
-  { zh: "设置投影 <投影>", en: "set projection <projection>" },
-  ...PROJECTION_OPTIONS,
-  { zh: "适应视图", en: "fit view" },
-  { zh: "重置视图", en: "reset view" },
-  { zh: "截图", en: "screenshot" },
-  { zh: "隐藏所有零件", en: "hide all parts" },
-  { zh: "显示所有零件", en: "show all parts" },
-  { zh: "隔离选中", en: "isolate selected" },
-  { zh: "文件信息", en: "file info" },
-  { zh: "设置参数 <名称> <值>", en: "set parameter <name> <value>" },
-  { zh: "重置参数", en: "reset parameters" },
-  { zh: "重置姿态", en: "reset pose" },
-  { zh: "播放动画", en: "play animation" },
-  { zh: "暂停动画", en: "pause animation" },
-  { zh: "进入预览", en: "preview mode" },
-  { zh: "退出预览", en: "exit preview" },
-  { zh: "深色模式", en: "dark mode" },
-  { zh: "浅色模式", en: "light mode" }
+  { zh: "帮助", en: "help", commandZh: "帮助", commandEn: "help" },
+  { zh: "打开 <文件名>", en: "open <file name>", commandZh: "打开 ", commandEn: "open " },
+  { zh: "设置显示模式 <模式>", en: "set display mode <mode>", commandZh: "设置显示模式 ", commandEn: "set display mode " },
+  ...MODE_ROWS,
+  { zh: "设置投影 <投影>", en: "set projection <projection>", commandZh: "设置投影 ", commandEn: "set projection " },
+  ...PROJECTION_ROWS,
+  { zh: "适应视图", en: "fit view", commandZh: "适应视图", commandEn: "fit view" },
+  { zh: "重置视图", en: "reset view", commandZh: "重置视图", commandEn: "reset view" },
+  { zh: "截图", en: "screenshot", commandZh: "截图", commandEn: "screenshot" },
+  { zh: "隐藏所有零件", en: "hide all parts", commandZh: "隐藏所有零件", commandEn: "hide all parts" },
+  { zh: "显示所有零件", en: "show all parts", commandZh: "显示所有零件", commandEn: "show all parts" },
+  { zh: "隔离选中", en: "isolate selected", commandZh: "隔离选中", commandEn: "isolate selected" },
+  { zh: "文件信息", en: "file info", commandZh: "文件信息", commandEn: "file info" },
+  { zh: "设置参数 <名称> <值>", en: "set parameter <name> <value>", commandZh: "设置参数 ", commandEn: "set parameter " },
+  { zh: "重置参数", en: "reset parameters", commandZh: "重置参数", commandEn: "reset parameters" },
+  { zh: "重置姿态", en: "reset pose", commandZh: "重置姿态", commandEn: "reset pose" },
+  { zh: "播放动画", en: "play animation", commandZh: "播放动画", commandEn: "play animation" },
+  { zh: "暂停动画", en: "pause animation", commandZh: "暂停动画", commandEn: "pause animation" },
+  { zh: "进入预览", en: "preview mode", commandZh: "进入预览", commandEn: "preview mode" },
+  { zh: "退出预览", en: "exit preview", commandZh: "退出预览", commandEn: "exit preview" },
+  { zh: "深色模式", en: "dark mode", commandZh: "深色模式", commandEn: "dark mode" },
+  { zh: "浅色模式", en: "light mode", commandZh: "浅色模式", commandEn: "light mode" }
 ]);
+
+export function buildCommandRows({ catalog = [], parameters = [], lang = "en" } = {}) {
+  const base = AI_COMMAND_ROWS.map((row) => ({
+    key: `base-${row.zh}`,
+    zh: row.zh,
+    en: row.en,
+    command: lang === "zh" ? row.commandZh : row.commandEn,
+    group: null
+  }));
+  const fileRows = (Array.isArray(catalog) ? catalog : []).map((item) => {
+    const label = String(item.label || item.key || "");
+    return {
+      key: `file-${item.key || label}`,
+      zh: `打开 ${label}`,
+      en: `open ${label}`,
+      command: lang === "zh" ? `打开 ${label}` : `open ${label}`,
+      group: "file"
+    };
+  });
+  const paramRows = (Array.isArray(parameters) ? parameters : []).map((parameter) => {
+    const label = String(parameter.label || parameter.id || "");
+    return {
+      key: `param-${parameter.id || label}`,
+      zh: `设置参数 ${label} `,
+      en: `set parameter ${label} `,
+      command: lang === "zh" ? `设置参数 ${label} ` : `set parameter ${label} `,
+      group: "param"
+    };
+  });
+  return [...base, ...fileRows, ...paramRows];
+}
 
 const DISPLAY_MODE_KEYWORDS = Object.freeze({
   solid: CAD_DISPLAY_MODE.SOLID,

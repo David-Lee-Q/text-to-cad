@@ -262,7 +262,7 @@ const HELP_DOCUMENT = {
       {
         title: "AI Assistant",
         blocks: [
-          { type: "p", text: "The Bot button in the top bar opens the AI assistant drawer. Type an exact built-in command to view and edit the current CAD file. Commands must match the built-in list exactly (no fuzzy matching); typing a slash (/) in the input shows the full command table. The assistant runs a local intent parser, so commands are handled entirely in your browser." },
+          { type: "p", text: "The Bot button in the top bar opens the AI assistant drawer. Type an exact built-in command to view and edit the current CAD file. Commands must match the built-in list exactly (no fuzzy matching); typing a slash (/) in the input shows the full command table, including the current files and model parameters. Clicking a row sends that command directly; rows with a parameter placeholder fill the input for you to complete. The assistant runs a local intent parser, so commands are handled entirely in your browser." },
           { type: "image", src: "/help-screenshots/12-ai-chat.png", alt: "AI assistant drawer replying to an open-file command" },
           {
             type: "table",
@@ -572,7 +572,7 @@ const HELP_DOCUMENT = {
       {
         title: "AI 助手",
         blocks: [
-          { type: "p", text: "顶部栏的机器人按钮可打开 AI 助手抽屉。输入精确的内置指令即可查看和编辑当前 CAD 文件。指令必须与内置指令一一对应，不支持模糊匹配；在输入框输入斜杠（/）可展开完整指令表格。助手使用本地意图解析器，指令完全在浏览器内处理。" },
+          { type: "p", text: "顶部栏的机器人按钮可打开 AI 助手抽屉。输入精确的内置指令即可查看和编辑当前 CAD 文件。指令必须与内置指令一一对应，不支持模糊匹配；在输入框输入斜杠（/）可展开完整指令表格，其中包含当前文件和模型参数。点击某一行可直接发送该指令；带参数占位符的行点击后会填入输入框，等待补充参数。助手使用本地意图解析器，指令完全在浏览器内处理。" },
           { type: "image", src: "/help-screenshots/12-ai-chat.png", alt: "AI 助手抽屉回复打开文件指令" },
           {
             type: "table",

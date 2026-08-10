@@ -2,6 +2,8 @@ function AssemblyContextMenuItemLabel({ children }) {
   return <span className="min-w-0 truncate">{children}</span>;
 }
 
+import { useI18n } from "@/i18n";
+
 export default function AssemblyContextMenuItems({
   Item,
   Separator,
@@ -45,13 +47,14 @@ export default function AssemblyContextMenuItems({
   onExpandAll,
   onCollapseAll
 }) {
-  const selectLabel = selected ? "Deselect" : "Select";
+  const { t } = useI18n();
+  const selectLabel = selected ? t("deselect") : t("select");
   const isolateLabel = isolated
-    ? "Exit isolate"
-    : "Isolate";
+    ? t("exitIsolate")
+    : t("isolate");
   const visibilityLabel = hidden
-    ? "Reveal"
-    : "Hide";
+    ? t("reveal")
+    : t("hide");
 
   return (
     <>
@@ -60,7 +63,7 @@ export default function AssemblyContextMenuItems({
         disabled={copyReferenceDisabled}
         onSelect={onCopyReference}
       >
-        <AssemblyContextMenuItemLabel>Copy Reference</AssemblyContextMenuItemLabel>
+        <AssemblyContextMenuItemLabel>{t("copyReference")}</AssemblyContextMenuItemLabel>
       </Item>
       <Separator />
       <Item
@@ -85,7 +88,7 @@ export default function AssemblyContextMenuItems({
           disabled={exitAllIsolateDisabled}
           onSelect={onExitAllIsolate}
         >
-          <AssemblyContextMenuItemLabel>Exit all isolates</AssemblyContextMenuItemLabel>
+          <AssemblyContextMenuItemLabel>{t("exitAllIsolates")}</AssemblyContextMenuItemLabel>
         </Item>
       ) : null}
       {showHideOther || showHideAll || showVisibility ? <Separator /> : null}
@@ -95,7 +98,7 @@ export default function AssemblyContextMenuItems({
           disabled={hideOtherDisabled}
           onSelect={onHideOther}
         >
-          <AssemblyContextMenuItemLabel>Hide others</AssemblyContextMenuItemLabel>
+          <AssemblyContextMenuItemLabel>{t("hideOthers")}</AssemblyContextMenuItemLabel>
         </Item>
       ) : null}
       {showHideAll ? (
@@ -124,14 +127,14 @@ export default function AssemblyContextMenuItems({
             disabled={resetZoomDisabled}
             onSelect={onResetZoom}
           >
-            <AssemblyContextMenuItemLabel>Reset Zoom</AssemblyContextMenuItemLabel>
+            <AssemblyContextMenuItemLabel>{t("resetZoomMenu")}</AssemblyContextMenuItemLabel>
           </Item>
           <Item
             className={itemClassName}
             disabled={zoomToFitDisabled}
             onSelect={onZoomToFit}
           >
-            <AssemblyContextMenuItemLabel>Zoom To Fit</AssemblyContextMenuItemLabel>
+            <AssemblyContextMenuItemLabel>{t("zoomToFit")}</AssemblyContextMenuItemLabel>
           </Item>
         </>
       ) : null}
@@ -143,28 +146,28 @@ export default function AssemblyContextMenuItems({
             disabled={expandSelectedDisabled}
             onSelect={onExpandSelected}
           >
-            <AssemblyContextMenuItemLabel>Expand</AssemblyContextMenuItemLabel>
+            <AssemblyContextMenuItemLabel>{t("expand")}</AssemblyContextMenuItemLabel>
           </Item>
           <Item
             className={itemClassName}
             disabled={collapseSelectedDisabled}
             onSelect={onCollapseSelected}
           >
-            <AssemblyContextMenuItemLabel>Collapse</AssemblyContextMenuItemLabel>
+            <AssemblyContextMenuItemLabel>{t("collapse")}</AssemblyContextMenuItemLabel>
           </Item>
           <Item
             className={itemClassName}
             disabled={expandAllDisabled}
             onSelect={onExpandAll}
           >
-            <AssemblyContextMenuItemLabel>Expand all</AssemblyContextMenuItemLabel>
+            <AssemblyContextMenuItemLabel>{t("expandAll")}</AssemblyContextMenuItemLabel>
           </Item>
           <Item
             className={itemClassName}
             disabled={collapseAllDisabled}
             onSelect={onCollapseAll}
           >
-            <AssemblyContextMenuItemLabel>Collapse all</AssemblyContextMenuItemLabel>
+            <AssemblyContextMenuItemLabel>{t("collapseAll")}</AssemblyContextMenuItemLabel>
           </Item>
         </>
       ) : null}

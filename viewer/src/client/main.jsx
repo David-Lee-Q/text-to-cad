@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import CadWorkspace from "./components/CadWorkspace";
 import faviconUrl from "./assets/favicon.ico";
 import "./styles/globals.css";
+import { I18nProvider } from "./i18n";
 import { getCadManifestSnapshot, subscribeCadManifest } from "./workbench/cadManifestStore.js";
 
 const ROOT_ID = "root";
@@ -40,7 +41,9 @@ function bootstrap() {
   };
   root.render(
     <StrictMode>
-      <AppRoot />
+      <I18nProvider>
+        <AppRoot />
+      </I18nProvider>
     </StrictMode>,
   );
 }

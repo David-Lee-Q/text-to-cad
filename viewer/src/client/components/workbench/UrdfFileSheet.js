@@ -27,6 +27,7 @@ import FileSheet, {
 } from "./FileSheet";
 import FileMetadataSection from "./FileMetadataSection";
 import FileStatusSection from "./FileStatusSection";
+import { useI18n } from "@/i18n";
 
 const fieldLabelClasses = FILE_SHEET_FIELD_LABEL_CLASSES;
 const compactInputClasses = FILE_SHEET_COMPACT_INPUT_CLASSES;
@@ -89,6 +90,7 @@ const UrdfJointRow = memo(function UrdfJointRow({
   valueDeg,
   onValueChange
 }) {
+  const { t } = useI18n();
   const jointName = String(joint?.name || "").trim();
   const minValueDeg = Number.isFinite(Number(joint?.minValueDeg)) ? Number(joint.minValueDeg) : -180;
   const maxValueDeg = Number.isFinite(Number(joint?.maxValueDeg)) ? Number(joint.maxValueDeg) : 180;
@@ -176,7 +178,7 @@ const UrdfJointRow = memo(function UrdfJointRow({
 
   return (
     <FileSheetSliderField
-      label={jointName || "Joint"}
+      label={jointName || t("joint")}
       value={formatJointValue(liveValueDeg, joint)}
       onValueCommit={(nextValue) => {
         commitValue(parseFileSheetNumberInput(nextValue, {
@@ -186,7 +188,7 @@ const UrdfJointRow = memo(function UrdfJointRow({
         }));
       }}
       valueInputProps={{
-        ariaLabel: `${jointName || "Joint"} value in ${unitLabel}`
+        ariaLabel: `${jointName || t("joint")} ${t("valueIn")} ${unitLabel}`
       }}
     >
         <Slider
@@ -207,7 +209,7 @@ const UrdfJointRow = memo(function UrdfJointRow({
           onValueCommit={(nextValue) => {
             commitValue(nextValue?.[0], { scrub: true });
           }}
-          aria-label={jointName || "Joint value"}
+          aria-label={`${jointName || t("joint")} ${t("value")}`}
           title={`${formatJointValue(minValueDeg, joint)} to ${formatJointValue(maxValueDeg, joint)}`}
         />
     </FileSheetSliderField>
@@ -234,6 +236,7 @@ const MotionCoordinateInput = memo(function MotionCoordinateInput({
     onValueChange?.(committedValue);
   };
 
+  const { t } = useI18n();
   return (
     <label className="block min-w-0">
       <span className={fieldLabelClasses}>{axis}</span>
@@ -261,13 +264,14 @@ const MotionCoordinateInput = memo(function MotionCoordinateInput({
           }
         }}
         className={`${compactInputClasses} mt-1 text-right`}
-        aria-label={`Target ${axis} coordinate`}
+        aria-label={`${t("target")} ${axis} ${t("coordinate")}`}
       />
     </label>
   );
 });
 
 function SdfValueField({ label, value }) {
+  const { t } = useI18n();
   const displayValue = String(value ?? "");
   return (
     <div className="block min-w-0">
@@ -293,6 +297,7 @@ function formatSdfMetadataItem(item, fields) {
 }
 
 function SdfMetadataList({ title, items, fields }) {
+  const { t } = useI18n();
   const records = Array.isArray(items)
     ? items.map((item) => formatSdfMetadataItem(item, fields)).filter(Boolean)
     : [];
@@ -313,7 +318,7 @@ function SdfMetadataList({ title, items, fields }) {
           </div>
         ))}
         {records.length > 5 ? (
-          <div className="text-xs text-muted-foreground">{records.length - 5} more</div>
+          <div className="text-xs text-muted-foreground">{t("more", { count: records.length - 5 })}</div>
         ) : null}
       </div>
     </div>
@@ -352,6 +357,7 @@ export default function UrdfFileSheet({
   openSectionIds = [],
   onOpenSectionIdsChange
 }) {
+  const { t } = useI18n();
   const isSdf = String(sourceFormat || "").trim().toLowerCase() === "sdf";
   const movableJoints = Array.isArray(joints) ? joints : [];
   const groupStatePresets = Array.isArray(groupStates) ? groupStates : [];
@@ -386,14 +392,14 @@ export default function UrdfFileSheet({
   const moveit2Settings = motion?.moveit2 && typeof motion.moveit2 === "object" ? motion.moveit2 : {};
   const motionBusy = Boolean(motion?.solving);
   const motionActionsEnabled = motion?.actionsEnabled !== false;
-  const motionServerStatus = motion?.serverLive ? "connected" : "offline";
+  const motionServerStatus = motion?.serverLive ? t("connected") : t("offline");
   const motionSelectPoseActive = Boolean(motion?.selectPoseActive);
   const motionTargetMatchesCurrentPosition = motionCurrentPosition ? motionPositionsClose(motionTargetPosition, motionCurrentPosition) : true;
   const activeGroupStateValue = groupStatePresets.some((state) => String(state?.id || "").trim() === activeGroupStateId)
     ? activeGroupStateId
     : "__custom__";
   const activeGroupState = groupStatePresets.find((state) => String(state?.id || "").trim() === activeGroupStateValue);
-  const activeGroupStateLabel = activeGroupStateValue === "__custom__" ? "custom" : String(activeGroupState?.label || activeGroupState?.name || activeGroupStateValue);
+  const activeGroupStateLabel = activeGroupStateValue === "__custom__" ? t("custom") : String(activeGroupState?.label || activeGroupState?.name || activeGroupStateValue);
 
   return (
     <FileSheet
@@ -412,52 +418,52 @@ export default function UrdfFileSheet({
         <FileStatusSection items={statusItems} />
 
         {isSdf ? (
-          <FileSheetSection value="sdf" title="SDF">
+          <FileSheetSection value="sdf" title={t("sdf")}>
               <div>
-                <FileSheetSubsection title="Document" contentClassName="px-3">
+                <FileSheetSubsection title={t("document")} contentClassName="px-3">
                 <div className="grid grid-cols-2 gap-2">
-                  <SdfValueField label="Version" value={String(sdfInfo.version || "unknown")} />
-                  <SdfValueField label="Document" value={String(sdfInfo.documentKind || "model")} />
+                  <SdfValueField label={t("version")} value={String(sdfInfo.version || t("unknown"))} />
+                  <SdfValueField label={t("document")} value={String(sdfInfo.documentKind || t("model"))} />
                   {sdfInfo.worldName ? (
-                    <SdfValueField label="World" value={String(sdfInfo.worldName)} />
+                    <SdfValueField label={t("world")} value={String(sdfInfo.worldName)} />
                   ) : null}
-                  <SdfValueField label="Frame mode" value={sdfInfo.nativeFrameSemantics ? "native" : "compat"} />
-                  <SdfValueField label="Root link" value={String(sdfInfo.rootLink || "")} />
-                  <SdfValueField label="Model" value={String(sdfInfo.modelName || title || "model")} />
+                  <SdfValueField label={t("frameMode")} value={sdfInfo.nativeFrameSemantics ? t("native") : t("compat")} />
+                  <SdfValueField label={t("rootLink")} value={String(sdfInfo.rootLink || "")} />
+                  <SdfValueField label={t("model")} value={String(sdfInfo.modelName || title || t("model"))} />
                 </div>
                 </FileSheetSubsection>
 
-                <FileSheetSubsection title="Counts" contentClassName="px-3">
+                <FileSheetSubsection title={t("counts")} contentClassName="px-3">
                 <div className="grid grid-cols-3 gap-2">
-                  <SdfValueField label="Links" value={String(sdfInfo.linkCount ?? movableJoints.length)} />
-                  <SdfValueField label="Joints" value={String(sdfInfo.jointCount ?? joints?.length ?? 0)} />
-                  <SdfValueField label="Frames" value={String(sdfInfo.frameCount ?? 0)} />
-                  <SdfValueField label="Includes" value={String(sdfIncludes.length)} />
-                  <SdfValueField label="Plugins" value={String(sdfPlugins.length)} />
-                  <SdfValueField label="Sensors" value={String(sdfSensors.length)} />
-                  <SdfValueField label="Lights" value={String(sdfLights.length)} />
-                  <SdfValueField label="Physics" value={String(sdfPhysics.length)} />
-                  <SdfValueField label="Nested models" value={formatSdfNumber(sdfNestedModelCount)} />
-                  <SdfValueField label="Unsupported geom." value={`${formatSdfNumber(sdfInfo.unsupportedVisualCount)} / ${formatSdfNumber(sdfInfo.unsupportedCollisionCount)}`} />
+                  <SdfValueField label={t("links")} value={String(sdfInfo.linkCount ?? movableJoints.length)} />
+                  <SdfValueField label={t("joints")} value={String(sdfInfo.jointCount ?? joints?.length ?? 0)} />
+                  <SdfValueField label={t("frames")} value={String(sdfInfo.frameCount ?? 0)} />
+                  <SdfValueField label={t("includes")} value={String(sdfIncludes.length)} />
+                  <SdfValueField label={t("plugins")} value={String(sdfPlugins.length)} />
+                  <SdfValueField label={t("sensors")} value={String(sdfSensors.length)} />
+                  <SdfValueField label={t("lights")} value={String(sdfLights.length)} />
+                  <SdfValueField label={t("physics")} value={String(sdfPhysics.length)} />
+                  <SdfValueField label={t("nestedModels")} value={formatSdfNumber(sdfNestedModelCount)} />
+                  <SdfValueField label={t("unsupportedGeom")} value={`${formatSdfNumber(sdfInfo.unsupportedVisualCount)} / ${formatSdfNumber(sdfInfo.unsupportedCollisionCount)}`} />
                 </div>
                 </FileSheetSubsection>
 
                 {hasSdfMetadata ? (
-                  <FileSheetSubsection title="Metadata" contentClassName="px-3">
-                    <SdfMetadataList title="Includes" items={sdfIncludes} fields={["name", "uri"]} />
-                    <SdfMetadataList title="Plugins" items={sdfPlugins} fields={["name", "filename"]} />
-                    <SdfMetadataList title="Sensors" items={sdfSensors} fields={["name", "type"]} />
-                    <SdfMetadataList title="Lights" items={sdfLights} fields={["name", "type"]} />
-                    <SdfMetadataList title="Physics" items={sdfPhysics} fields={["name", "type", "default"]} />
+                  <FileSheetSubsection title={t("metadata")} contentClassName="px-3">
+                    <SdfMetadataList title={t("includes")} items={sdfIncludes} fields={["name", "uri"]} />
+                    <SdfMetadataList title={t("plugins")} items={sdfPlugins} fields={["name", "filename"]} />
+                    <SdfMetadataList title={t("sensors")} items={sdfSensors} fields={["name", "type"]} />
+                    <SdfMetadataList title={t("lights")} items={sdfLights} fields={["name", "type"]} />
+                    <SdfMetadataList title={t("physics")} items={sdfPhysics} fields={["name", "type", "default"]} />
                   </FileSheetSubsection>
                 ) : null}
               </div>
           </FileSheetSection>
         ) : null}
         {motionEnabled ? (
-          <FileSheetSection value="motion" title="MoveIt2">
+          <FileSheetSection value="motion" title={t("moveIt2")}>
               <div>
-                <FileSheetSubsection title="Status">
+                <FileSheetSubsection title={t("status")}>
                 <FileSheetControlRow>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block min-w-0">
@@ -467,28 +473,28 @@ export default function UrdfFileSheet({
                       readOnly
                       disabled
                       className={`${compactInputClasses} mt-1`}
-                      aria-label="SRDF status"
+                      aria-label={t("srdfStatus")}
                     />
                   </label>
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>MoveIt2 server</span>
+                    <span className={fieldLabelClasses}>{t("moveIt2Server")}</span>
                     <Input
                       value={motionServerStatus}
                       readOnly
                       disabled
                       className={`${compactInputClasses} mt-1`}
-                    aria-label="MoveIt2 server status"
+                    aria-label={t("moveIt2ServerStatus")}
                   />
                 </label>
               </div>
                 </FileSheetControlRow>
                 </FileSheetSubsection>
 
-                <FileSheetSubsection title="Target">
+                <FileSheetSubsection title={t("target")}>
                 <FileSheetControlRow>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>Planning group</span>
+                    <span className={fieldLabelClasses}>{t("planningGroup")}</span>
                     <Select
                       value={activeMotionPlanningGroupName}
                       disabled={motionBusy || motionPlanningGroups.length <= 1}
@@ -512,7 +518,7 @@ export default function UrdfFileSheet({
                     </Select>
                   </label>
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>End effector</span>
+                    <span className={fieldLabelClasses}>{t("endEffector")}</span>
                   <Select
                     value={activeMotionEndEffectorName}
                     disabled={motionBusy || motionEndEffectors.length <= 1}
@@ -536,7 +542,7 @@ export default function UrdfFileSheet({
                   </Select>
                   </label>
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>Target frame</span>
+                    <span className={fieldLabelClasses}>{t("targetFrame")}</span>
                     <Select
                       value={activeMotionTargetFrameName}
                       disabled={motionBusy || motionTargetFrames.length <= 1}
@@ -579,11 +585,11 @@ export default function UrdfFileSheet({
                 </FileSheetControlRow>
                 </FileSheetSubsection>
 
-                <FileSheetSubsection title="Solver">
+                <FileSheetSubsection title={t("solver")}>
                 <FileSheetControlRow>
                 <div className="grid grid-cols-3 gap-2">
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>IK timeout</span>
+                    <span className={fieldLabelClasses}>{t("ikTimeout")}</span>
                     <Input
                       type="number"
                       step="0.01"
@@ -595,7 +601,7 @@ export default function UrdfFileSheet({
                     />
                   </label>
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>IK attempts</span>
+                    <span className={fieldLabelClasses}>{t("ikAttempts")}</span>
                     <Input
                       type="number"
                       step="1"
@@ -607,7 +613,7 @@ export default function UrdfFileSheet({
                     />
                   </label>
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>Tolerance</span>
+                    <span className={fieldLabelClasses}>{t("tolerance")}</span>
                     <Input
                       type="number"
                       step="0.001"
@@ -622,11 +628,11 @@ export default function UrdfFileSheet({
                 </FileSheetControlRow>
                 </FileSheetSubsection>
 
-                <FileSheetSubsection title="Planning">
+                <FileSheetSubsection title={t("planning")}>
                 <FileSheetControlRow>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>Planning pipeline</span>
+                    <span className={fieldLabelClasses}>{t("planningPipeline")}</span>
                     <Input
                       value={moveit2Settings.planningPipeline ?? "ompl"}
                       disabled={motionBusy}
@@ -635,7 +641,7 @@ export default function UrdfFileSheet({
                     />
                   </label>
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>Planner ID</span>
+                    <span className={fieldLabelClasses}>{t("plannerId")}</span>
                     <Input
                       value={moveit2Settings.plannerId ?? "RRTConnectkConfigDefault"}
                       disabled={motionBusy}
@@ -649,7 +655,7 @@ export default function UrdfFileSheet({
                 <FileSheetControlRow>
                 <div className="grid grid-cols-3 gap-2">
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>Plan time</span>
+                    <span className={fieldLabelClasses}>{t("planTime")}</span>
                     <Input
                       type="number"
                       step="0.1"
@@ -661,7 +667,7 @@ export default function UrdfFileSheet({
                     />
                   </label>
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>Velocity</span>
+                    <span className={fieldLabelClasses}>{t("velocity")}</span>
                     <Input
                       type="number"
                       step="0.05"
@@ -674,7 +680,7 @@ export default function UrdfFileSheet({
                     />
                   </label>
                   <label className="block min-w-0">
-                    <span className={fieldLabelClasses}>Acceleration</span>
+                    <span className={fieldLabelClasses}>{t("acceleration")}</span>
                     <Input
                       type="number"
                       step="0.05"
@@ -690,7 +696,7 @@ export default function UrdfFileSheet({
                 </FileSheetControlRow>
                 </FileSheetSubsection>
 
-                <FileSheetSubsection title="Actions">
+                <FileSheetSubsection title={t("actions")}>
                 <FileSheetControlRow>
                 <div className="flex flex-wrap gap-1.5">
                   <Button
@@ -708,7 +714,7 @@ export default function UrdfFileSheet({
                     }}
                     aria-pressed={motionSelectPoseActive}
                   >
-                    <span>Select Pose</span>
+                    <span>{t("selectPose")}</span>
                   </Button>
                   {!motionTargetMatchesCurrentPosition ? (
                     <Button
@@ -721,7 +727,7 @@ export default function UrdfFileSheet({
                         motion?.onUseCurrentPosition?.();
                       }}
                     >
-                      <span>Reset</span>
+                      <span>{t("reset")}</span>
                     </Button>
                   ) : null}
                   <Button
@@ -734,7 +740,7 @@ export default function UrdfFileSheet({
                       void motion?.onSolve?.();
                     }}
                   >
-                    <span>{motionBusy ? "Solving..." : "Solve pose"}</span>
+                    <span>{motionBusy ? t("solving") : t("solvePose")}</span>
                   </Button>
                   <Button
                     type="button"
@@ -746,7 +752,7 @@ export default function UrdfFileSheet({
                       void motion?.onPlan?.();
                     }}
                   >
-                    <span>{motionBusy ? "Planning..." : "Plan to pose"}</span>
+                    <span>{motionBusy ? t("planningDots") : t("planToPose")}</span>
                   </Button>
                 </div>
                 </FileSheetControlRow>
@@ -755,12 +761,12 @@ export default function UrdfFileSheet({
           </FileSheetSection>
         ) : null}
         {showJoints ? (
-        <FileSheetSection value="joints" title="Joints">
+        <FileSheetSection value="joints" title={t("joints")}>
             {movableJoints.length ? (
               <>
-                <FileSheetSubsection title="Controls">
+                <FileSheetSubsection title={t("controls")}>
                   {groupStatePresets.length ? (
-                    <FileSheetControlRow label="Group state">
+                    <FileSheetControlRow label={t("groupState")}>
                       <Select
                         value={activeGroupStateValue}
                         onValueChange={(value) => {
@@ -779,7 +785,7 @@ export default function UrdfFileSheet({
                         <SelectContent>
                           {groupStatePresets.map((groupState) => {
                             const groupStateId = String(groupState?.id || "").trim();
-                            const groupStateName = String(groupState?.label || groupState?.name || "").trim() || "State";
+                            const groupStateName = String(groupState?.label || groupState?.name || "").trim() || t("state");
                             return (
                               <SelectItem key={groupStateId} value={groupStateId}>
                                 {groupStateName}
@@ -800,7 +806,7 @@ export default function UrdfFileSheet({
                       onClick={onResetPose}
                     >
                       <RotateCcw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-                      <span>Reset pose</span>
+                      <span>{t("resetPose")}</span>
                     </Button>
                     <Button
                       type="button"
@@ -812,12 +818,12 @@ export default function UrdfFileSheet({
                       }}
                     >
                       <Copy className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-                      <span>{isSdf ? "Copy values" : "Copy angles"}</span>
+                      <span>{isSdf ? t("copyValues") : t("copyAngles")}</span>
                     </Button>
                   </div>
                   </FileSheetControlRow>
                 </FileSheetSubsection>
-                <FileSheetSubsection title="Values">
+                <FileSheetSubsection title={t("values")}>
                 {movableJoints.map((joint) => (
                   <UrdfJointRow
                     key={joint.name}
@@ -829,7 +835,7 @@ export default function UrdfFileSheet({
                 </FileSheetSubsection>
               </>
             ) : (
-              <p className="px-3 py-2 text-xs text-muted-foreground">No movable joints are available.</p>
+              <p className="px-3 py-2 text-xs text-muted-foreground">{t("noMovableJoints")}</p>
             )}
         </FileSheetSection>
         ) : null}

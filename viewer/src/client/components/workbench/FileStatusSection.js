@@ -4,6 +4,7 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { copyTextToClipboard } from "@/ui/clipboard";
 import { cn } from "@/ui/utils";
+import { useI18n } from "@/i18n";
 import {
   FILE_STATUS_LEVELS,
   formatFileStatusItemForAgent,
@@ -41,6 +42,7 @@ export default function FileStatusSection({
   items = [],
   value = "status"
 }) {
+  const { t } = useI18n();
   const [expandedItemIds, setExpandedItemIds] = useState(() => new Set());
   const [copiedItemId, setCopiedItemId] = useState("");
   const statusItems = fileStatusWarningOrErrorItems(items);
@@ -107,7 +109,7 @@ export default function FileStatusSection({
       value={value}
       title={(
         <span className="flex min-w-0 items-center gap-2">
-          <span>Issues</span>
+          <span>{t("issues")}</span>
           <Badge variant={headerMeta.badgeVariant} className={STATUS_COUNT_BADGE_CLASSES}>{statusItems.length}</Badge>
         </span>
       )}

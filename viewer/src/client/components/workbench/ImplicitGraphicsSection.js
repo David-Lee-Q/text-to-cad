@@ -7,6 +7,7 @@ import {
   normalizeImplicitGraphicsSettings
 } from "@/workbench/implicitGraphicsSettings";
 import { Button } from "../ui/button";
+import { useI18n } from "@/i18n";
 import { Slider } from "../ui/slider";
 import {
   FILE_SHEET_COMPACT_BUTTON_CLASSES,
@@ -70,6 +71,7 @@ export default function ImplicitGraphicsSection({
   value = "graphics",
   title = "Graphics"
 }) {
+  const { t } = useI18n();
   const settings = normalizeImplicitGraphicsSettings(runtime?.settings);
   const hasModelColors = Boolean(runtime?.model?.colorSource);
   const hasDefaultSettings = implicitGraphicsSettingsEqual(settings, DEFAULT_IMPLICIT_GRAPHICS_SETTINGS);
@@ -102,29 +104,29 @@ export default function ImplicitGraphicsSection({
           runtime
         })}
         <FileSheetToggleRow
-          label="Model colors"
+          label={t("modelColors")}
           checked={settings.modelColors && hasModelColors}
           disabled={!hasModelColors}
           onCheckedChange={(checked) => updateSetting(runtime, "modelColors", checked)}
-          ariaLabel="Model colors"
+          ariaLabel={t("modelColors")}
         />
         <FileSheetToggleRow
-          label="Soft shadows"
+          label={t("softShadows")}
           checked={settings.shadows}
           onCheckedChange={(checked) => updateSetting(runtime, "shadows", checked)}
-          ariaLabel="Soft shadows"
+          ariaLabel={t("softShadows")}
         />
         <FileSheetToggleRow
-          label="Ambient occlusion"
+          label={t("ambientOcclusion")}
           checked={settings.ambientOcclusion}
           onCheckedChange={(checked) => updateSetting(runtime, "ambientOcclusion", checked)}
-          ariaLabel="Ambient occlusion"
+          ariaLabel={t("ambientOcclusion")}
         />
         <FileSheetToggleRow
-          label="Rim light"
+          label={t("rimLight")}
           checked={settings.rimLight}
           onCheckedChange={(checked) => updateSetting(runtime, "rimLight", checked)}
-          ariaLabel="Rim light"
+          ariaLabel={t("rimLight")}
         />
         <FileSheetControlRow className="pt-2">
           <Button
@@ -134,10 +136,10 @@ export default function ImplicitGraphicsSection({
             className={cn(FILE_SHEET_COMPACT_BUTTON_CLASSES, "w-full justify-center")}
             disabled={hasDefaultSettings}
             onClick={() => runtime?.onSettingsChange?.(DEFAULT_IMPLICIT_GRAPHICS_SETTINGS)}
-            title="Reset graphics"
+            title={t("resetGraphics")}
           >
             <RotateCcw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-            <span>Reset graphics</span>
+            <span>{t("resetGraphics")}</span>
           </Button>
         </FileSheetControlRow>
       </FileSheetSectionBody>

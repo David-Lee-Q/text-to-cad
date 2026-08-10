@@ -15,6 +15,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import AssemblyContextMenuItems from "./AssemblyContextMenuItems";
 import { cn } from "@/ui/utils";
+import { useI18n } from "@/i18n";
 import { RENDER_FORMAT } from "@/workbench/constants";
 import {
   isMeshRenderFormat,
@@ -88,6 +89,7 @@ function DxfViewModeControl({
   onChange
 }) {
   const normalizedValue = value === "3d" && threeDimensionalAvailable ? "3d" : "2d";
+  const { t } = useI18n();
 
   return (
     <div className="cad-glass-surface rounded-md border border-sidebar-border p-0.5 shadow-sm">
@@ -106,12 +108,12 @@ function DxfViewModeControl({
           onChange?.(nextValue);
         }}
         className="grid h-7 w-[5.5rem] grid-cols-2"
-        aria-label="DXF view mode"
+        aria-label={t("dxfViewMode")}
       >
         <ToggleGroupItem
           value="2d"
           className="!h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground data-[state=on]:!bg-accent data-[state=on]:!text-foreground data-[state=on]:font-semibold"
-          title="Show DXF flat pattern"
+          title={t("showDxfFlatPattern")}
         >
           2D
         </ToggleGroupItem>
@@ -387,7 +389,8 @@ export default function CadRenderPane({
       }
     };
   }, [stepParameters, liveStepAnimation]);
-  const viewerAlertIconLabel = "Viewer error. See the Issues section for details.";
+  const { t } = useI18n();
+  const viewerAlertIconLabel = t("viewerErrorAlert");
   const dxfMode = renderFormat === RENDER_FORMAT.DXF;
   const gcodeMode = renderFormat === RENDER_FORMAT.GCODE;
   const urdfMode = isRobotRenderFormat(renderFormat);
@@ -627,7 +630,7 @@ export default function CadRenderPane({
             <p className="col-start-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-destructive">
               File does not exist
             </p>
-            <AlertTitle className="col-start-1 mt-1 line-clamp-none text-lg text-foreground">File does not exist</AlertTitle>
+            <AlertTitle className="col-start-1 mt-1 line-clamp-none text-lg text-foreground">{t("fileDoesNotExist")}</AlertTitle>
             <AlertDescription className="col-start-1 mt-1 text-sm leading-6 text-muted-foreground">
               <code className="rounded-md bg-muted px-2 py-1 text-xs text-foreground">{missingFileLabel}</code>
             </AlertDescription>
@@ -708,8 +711,8 @@ export default function CadRenderPane({
           onClick={() => {
             urdfPosePicker?.onCancel?.();
           }}
-          aria-label="Exit Select Pose"
-          title="Exit Select Pose"
+          aria-label={t("exitSelectPose")}
+          title={t("exitSelectPose")}
         >
           <X className="size-3.5" strokeWidth={2} aria-hidden="true" />
         </Button>

@@ -52,6 +52,7 @@ import {
 } from "../ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import { cn } from "@/ui/utils";
+import { useI18n } from "@/i18n";
 import {
   cloneThemePresetSettings,
   DEFAULT_THEME_PRESET_ID,
@@ -105,34 +106,34 @@ import FileSheet, {
 } from "./FileSheet";
 
 const BACKGROUND_MODE_OPTIONS = [
-  { value: "solid", label: "Solid" },
-  { value: "linear", label: "Linear" },
-  { value: "radial", label: "Radial" },
-  { value: "transparent", label: "Transparent" }
+  { value: "solid", label: "Solid", labelKey: "bgSolid" },
+  { value: "linear", label: "Linear", labelKey: "bgLinear" },
+  { value: "radial", label: "Radial", labelKey: "bgRadial" },
+  { value: "transparent", label: "Transparent", labelKey: "bgTransparent" }
 ];
 
 const PROJECTION_MODE_OPTIONS = [
-  { value: CAMERA_PROJECTION.ORTHOGRAPHIC, label: "Orthographic", title: "Parallel projection for CAD inspection", Icon: OrthographicProjectionIcon },
-  { value: CAMERA_PROJECTION.PERSPECTIVE, label: "Perspective", title: "Depth projection with vanishing lines", Icon: PerspectiveProjectionIcon }
+  { value: CAMERA_PROJECTION.ORTHOGRAPHIC, label: "Orthographic", labelKey: "projOrthographic", title: "Parallel projection for CAD inspection", titleKey: "projOrthographicTitle", Icon: OrthographicProjectionIcon },
+  { value: CAMERA_PROJECTION.PERSPECTIVE, label: "Perspective", labelKey: "projPerspective", title: "Depth projection with vanishing lines", titleKey: "projPerspectiveTitle", Icon: PerspectiveProjectionIcon }
 ];
 
 const COLOR_MODE_OPTIONS = [
-  { value: THEME_COLOR_MODES.SYSTEM, label: "System" },
-  { value: THEME_COLOR_MODES.LIGHT, label: "Light" },
-  { value: THEME_COLOR_MODES.DARK, label: "Dark" }
+  { value: THEME_COLOR_MODES.SYSTEM, label: "System", labelKey: "cmSystem" },
+  { value: THEME_COLOR_MODES.LIGHT, label: "Light", labelKey: "cmLight" },
+  { value: THEME_COLOR_MODES.DARK, label: "Dark", labelKey: "cmDark" }
 ];
 
 const EXPLODED_AXIS_OPTIONS = [
-  { value: "x", label: "X" },
-  { value: "y", label: "Y" },
-  { value: "z", label: "Z" },
-  { value: "radial", label: "Radial" }
+  { value: "x", label: "X", labelKey: "axisX" },
+  { value: "y", label: "Y", labelKey: "axisY" },
+  { value: "z", label: "Z", labelKey: "axisZ" },
+  { value: "radial", label: "Radial", labelKey: "axisRadial" }
 ];
 
 const PRIMARY_LIGHT_OPTIONS = [
-  { value: "directional", label: "Directional" },
-  { value: "spot", label: "Spot" },
-  { value: "point", label: "Point" }
+  { value: "directional", label: "Directional", labelKey: "lightDirectional" },
+  { value: "spot", label: "Spot", labelKey: "lightSpot" },
+  { value: "point", label: "Point", labelKey: "lightPoint" }
 ];
 
 const fieldLabelClasses = FILE_SHEET_FIELD_LABEL_CLASSES;
@@ -142,10 +143,10 @@ const precisionSliderClasses = FILE_SHEET_PRECISION_SLIDER_CLASSES;
 const SLIDER_COMMIT_DELAY_MS = 120;
 const AXIS_OPTIONS = Object.freeze(["x", "y", "z"]);
 const EDGE_CLASS_CONTROLS = Object.freeze([
-  Object.freeze({ id: "feature", label: "Feature", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 1, defaultThickness: 1.15 }),
-  Object.freeze({ id: "tangent", label: "Tangent", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 0.5, defaultThickness: 1.15 }),
-  Object.freeze({ id: "seam", label: "Seam", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 0.85, defaultThickness: 1.15 }),
-  Object.freeze({ id: "degenerate", label: "Degenerate", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 1, defaultThickness: 0 })
+  Object.freeze({ id: "feature", label: "Feature", labelKey: "edgeFeature", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 1, defaultThickness: 1.15 }),
+  Object.freeze({ id: "tangent", label: "Tangent", labelKey: "edgeTangent", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 0.5, defaultThickness: 1.15 }),
+  Object.freeze({ id: "seam", label: "Seam", labelKey: "edgeSeam", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 0.85, defaultThickness: 1.15 }),
+  Object.freeze({ id: "degenerate", label: "Degenerate", labelKey: "edgeDegenerate", defaultColor: CAD_EDGE_COLOR, defaultOpacity: 1, defaultThickness: 0 })
 ]);
 
 function clamp(value, min, max) {
@@ -370,6 +371,7 @@ function EdgeMetricInput({
   onOpacityChange,
   onThicknessChange
 }) {
+  const { t } = useI18n();
   return (
     <div
       className={cn(
@@ -387,8 +389,8 @@ function EdgeMetricInput({
         onOpacityChange={onOpacityChange}
         className="h-7 w-7 rounded-none border-0 border-r border-input bg-transparent px-1.5 shadow-none"
         swatchClassName="size-3.5"
-        title={`${label} edge color`}
-        aria-label={`${label} edge color`}
+        title={`${label} ${t("edgeColor")}`}
+        aria-label={`${label} ${t("edgeColor")}`}
       />
       <CompactNumberInput
         value={thickness}
@@ -396,7 +398,7 @@ function EdgeMetricInput({
         max={max}
         digits={digits}
         disabled={disabled}
-        ariaLabel={`${label} edge thickness`}
+        ariaLabel={`${label} ${t("edgeThickness")}`}
         onChange={onThicknessChange}
       />
       <span className="pr-1.5 text-[10px] font-medium text-muted-foreground">px</span>
@@ -521,14 +523,15 @@ function themeModeColorValue(themeSettings = {}, path = [], mode = THEME_COLOR_M
 }
 
 function ColorModeIndicatorLabel({ label, mode }) {
+  const { t } = useI18n();
   const isDarkMode = mode === THEME_COLOR_MODES.DARK;
   const ModeIcon = isDarkMode ? Moon : Sun;
-  const modeLabel = isDarkMode ? "dark" : "light";
+  const modeLabel = isDarkMode ? t("dark") : t("light");
   return (
-    <span className="inline-flex max-w-full items-center gap-1 align-bottom" title={`Uses the ${modeLabel} mode color`}>
+    <span className="inline-flex max-w-full items-center gap-1 align-bottom" title={t("usesModeColor", { mode: modeLabel })}>
       <span className="min-w-0 truncate">{label}</span>
       <ModeIcon className="size-2.5 shrink-0 text-muted-foreground/70" strokeWidth={2.25} aria-hidden="true" />
-      <span className="sr-only">{`Uses the ${modeLabel} mode color`}</span>
+      <span className="sr-only">{t("usesModeColor", { mode: modeLabel })}</span>
     </span>
   );
 }
@@ -573,6 +576,7 @@ function settingsSignature(settings) {
 }
 
 function FillColorEditor({ colors, onChange, cycleColors = false }) {
+  const { t } = useI18n();
   const resolvedColors = colors.length ? colors : ["#ffffff"];
   const commitColors = (nextColors) => {
     const compactColors = nextColors.filter(Boolean).slice(0, MAX_THEME_FILL_COLORS);
@@ -600,8 +604,8 @@ function FillColorEditor({ colors, onChange, cycleColors = false }) {
               nextColors[index] = nextColor;
               commitColors(nextColors);
             }}
-            aria-label={`Fill color ${index + 1}`}
-            title={`Fill color ${index + 1}: ${color}`}
+            aria-label={`${t("fillColor")} ${index + 1}`}
+            title={`${t("fillColor")} ${index + 1}: ${color}`}
           />
           {resolvedColors.length > 1 ? (
             <Button
@@ -610,8 +614,8 @@ function FillColorEditor({ colors, onChange, cycleColors = false }) {
               size="icon-xs"
               className="absolute -right-1.5 -top-1.5 z-10 size-4 rounded-full border-border !bg-[rgb(245_247_250)] p-0 text-muted-foreground shadow-xs hover:!bg-[rgb(245_247_250)] hover:text-foreground dark:!bg-[rgb(12_15_22)] dark:hover:!bg-[rgb(12_15_22)]"
               onClick={() => commitColors(resolvedColors.filter((_, colorIndex) => colorIndex !== index))}
-              aria-label={`Remove color ${index + 1}`}
-              title={`Remove color ${index + 1}`}
+              aria-label={`${t("removeColor")} ${index + 1}`}
+              title={`${t("removeColor")} ${index + 1}`}
             >
               <X className="h-2.5 w-2.5" strokeWidth={2.25} aria-hidden="true" />
             </Button>
@@ -625,8 +629,8 @@ function FillColorEditor({ colors, onChange, cycleColors = false }) {
           size="icon-sm"
           className="size-7 rounded-md p-0 text-muted-foreground hover:text-foreground"
           onClick={() => commitColors([...resolvedColors, resolvedColors[resolvedColors.length - 1] || "#ffffff"])}
-          aria-label="Add fill color"
-          title="Add fill color"
+          aria-label={t("addFillColor")}
+          title={t("addFillColor")}
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
         </Button>
@@ -636,6 +640,7 @@ function FillColorEditor({ colors, onChange, cycleColors = false }) {
 }
 
 function SegmentedControl({ value, onChange, options }) {
+  const { t } = useI18n();
   const columnCount = Math.max(1, Math.min(options.length, options.length > 4 ? 3 : 4));
   const templateColumns = `repeat(${columnCount}, minmax(0, 1fr))`;
   return (
@@ -662,11 +667,11 @@ function SegmentedControl({ value, onChange, options }) {
             value={option.value}
             disabled={disabled}
             className={cn("min-w-0 gap-1.5 !h-7 px-1.5 text-[11px]", FILE_SHEET_SEGMENTED_ITEM_CLASSES)}
-            title={option.title || option.label}
-            aria-label={option.label}
+            title={option.titleKey ? t(option.titleKey) : (option.labelKey ? t(option.labelKey) : option.label)}
+            aria-label={option.labelKey ? t(option.labelKey) : option.label}
           >
             {Icon ? <Icon className="size-3" strokeWidth={2} aria-hidden="true" /> : null}
-            <span className="truncate">{option.label}</span>
+            <span className="truncate">{option.labelKey ? t(option.labelKey) : option.label}</span>
           </ToggleGroupItem>
         );
       })}
@@ -817,9 +822,10 @@ function ThemePresetOverflowMenu({
   onEdit,
   onReset
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const label = String(preset?.label || "theme").trim() || "theme";
-  const actionsLabel = `Theme actions for ${label}`;
+  const actionsLabel = `${t("themeActionsFor")} ${label}`;
 
   const setActionActive = (nextActive) => {
     onActionActiveChange?.(nextActive);
@@ -878,7 +884,7 @@ function ThemePresetOverflowMenu({
           onSelect={(event) => handleActionSelect(event, onEdit)}
         >
           <Pencil className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-          <span>Edit</span>
+          <span>{t("edit")}</span>
         </DropdownMenuItem>
         {canResetToDefault ? (
           <DropdownMenuItem
@@ -886,7 +892,7 @@ function ThemePresetOverflowMenu({
             onSelect={(event) => handleActionSelect(event, onReset)}
           >
             <RotateCcw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-            <span>Reset to preset</span>
+            <span>{t("resetToPreset")}</span>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
@@ -897,7 +903,7 @@ function ThemePresetOverflowMenu({
           onSelect={(event) => handleActionSelect(event, canDeleteTheme ? onDelete : null)}
         >
           <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-          <span>Delete</span>
+          <span>{t("delete")}</span>
         </DropdownMenuItem>
       </DropdownMenuSubContent>
     </DropdownMenuSub>
@@ -912,6 +918,7 @@ function ThemeWarningDialog({
   actionLabel,
   onConfirm
 }) {
+  const { t } = useI18n();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="sm:max-w-sm">
@@ -920,7 +927,7 @@ function ThemeWarningDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-white hover:bg-destructive/90"
             onClick={onConfirm}
@@ -939,6 +946,7 @@ function SaveThemeDialog({
   onSave,
   open
 }) {
+  const { t } = useI18n();
   const inputId = useId();
   const [draftName, setDraftName] = useState(defaultName);
   const normalizedDraftName = draftName.trim();
@@ -965,14 +973,14 @@ function SaveThemeDialog({
       <DialogContent className="p-5 sm:max-w-sm">
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <DialogHeader className="gap-1.5">
-            <DialogTitle className="text-base">Save Theme</DialogTitle>
+            <DialogTitle className="text-base">{t("saveTheme")}</DialogTitle>
             <DialogDescription className="sr-only">
-              Enter a name for this theme.
+              {t("enterThemeName")}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-1.5">
             <label className={fieldLabelClasses} htmlFor={inputId}>
-              Theme name
+              {t("themeName")}
             </label>
             <Input
               id={inputId}
@@ -984,11 +992,11 @@ function SaveThemeDialog({
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" size="sm">
-                Cancel
+                {t("cancel")}
               </Button>
             </DialogClose>
             <Button type="submit" size="sm" disabled={!normalizedDraftName}>
-              Save theme
+              {t("saveTheme")}
             </Button>
           </DialogFooter>
         </form>
@@ -1009,6 +1017,7 @@ export function ThemePresetDropdown({
   triggerClassName,
   iconClassName
 }) {
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteThemeId, setDeleteThemeId] = useState("");
   const [resetThemeId, setResetThemeId] = useState("");
@@ -1024,7 +1033,7 @@ export function ThemePresetDropdown({
     [themePresets, themePresetId, themeSettings]
   );
   const activeThemePresetId = activeThemePreset?.id || "";
-  const activeThemeLabel = activeThemePreset?.label || "Theme";
+  const activeThemeLabel = activeThemePreset?.label || t("theme");
   const deleteThemePreset = themePresets.find((preset) => preset.id === deleteThemeId) || null;
   const resetThemePreset = themePresets.find((preset) => preset.id === resetThemeId) || null;
   const themeLibraryHasChanged = useMemo(
@@ -1108,17 +1117,17 @@ export function ThemePresetDropdown({
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label={`Theme: ${activeThemeLabel}`}
-            title={`Theme: ${activeThemeLabel}`}
+            aria-label={`${t("theme")}: ${activeThemeLabel}`}
+            title={`${t("theme")}: ${activeThemeLabel}`}
             className={triggerClassName}
           >
             <Contrast className={iconClassName} strokeWidth={2} aria-hidden="true" />
-            <span className="sr-only">Theme</span>
+            <span className="sr-only">{t("theme")}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={6} className="w-64">
           <DropdownMenuLabel className="px-2 py-1.5 text-xs text-muted-foreground">
-            Theme
+            {t("theme")}
           </DropdownMenuLabel>
           {orderedPresets.map((preset) => {
             const active = preset.id === activeThemePresetId;
@@ -1150,7 +1159,7 @@ export function ThemePresetDropdown({
                       className="rounded-full border px-1.5 py-0.5 text-[9px] uppercase text-muted-foreground"
                       data-theme-menu-default-badge=""
                     >
-                      Default
+                      {t("default")}
                     </span>
                   ) : null}
                 </DropdownMenuItem>
@@ -1188,7 +1197,7 @@ export function ThemePresetDropdown({
                 }}
               >
                 <RotateCcw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-                <span>Restore defaults</span>
+                <span>{t("restoreDefaults")}</span>
               </DropdownMenuItem>
             </>
           ) : null}
@@ -1201,9 +1210,9 @@ export function ThemePresetDropdown({
             setDeleteThemeId("");
           }
         }}
-        title="Delete Theme"
-        description={`Delete ${deleteThemePreset?.label || "this theme"}? This removes it from your theme list.`}
-        actionLabel="Delete theme"
+        title={t("deleteTheme")}
+        description={t("deleteThemeDescription", { name: deleteThemePreset?.label || t("thisTheme") })}
+        actionLabel={t("deleteThemeAction")}
         onConfirm={handleConfirmDeleteTheme}
       />
       <ThemeWarningDialog
@@ -1213,17 +1222,17 @@ export function ThemePresetDropdown({
             setResetThemeId("");
           }
         }}
-        title="Reset Theme"
-        description={`Reset ${resetThemePreset?.label || "this theme"} to its built-in preset settings?`}
-        actionLabel="Reset theme"
+        title={t("resetTheme")}
+        description={t("resetThemeDescription", { name: resetThemePreset?.label || t("thisTheme") })}
+        actionLabel={t("resetThemeAction")}
         onConfirm={handleConfirmResetTheme}
       />
       <ThemeWarningDialog
         open={restoreThemesDialogOpen}
         onOpenChange={setRestoreThemesDialogOpen}
-        title="Restore Defaults"
-        description="This clears saved theme changes, removes saved themes, and restores deleted presets."
-        actionLabel="Restore defaults"
+        title={t("restoreDefaults")}
+        description={t("restoreDefaultsDescription")}
+        actionLabel={t("restoreDefaults")}
         onConfirm={handleConfirmRestoreThemes}
       />
     </>
@@ -1239,6 +1248,7 @@ function ThemeAppearanceSection({
   handleSaveCustomThemePreset,
   handleUpdateThemePresetSettings
 }) {
+  const { t } = useI18n();
   const [saveThemeDialogOpen, setSaveThemeDialogOpen] = useState(false);
   const activeThemePreset = useMemo(
     () => resolveActiveThemePreset(themePresets, themePresetId, themeSettings),
@@ -1248,8 +1258,8 @@ function ThemeAppearanceSection({
   const canUpdateActiveTheme = themePresetCanUpdate(activeThemePreset);
   const themeHasChanged = themeSettingsChangedFromPreset(activeThemePreset, themeSettings);
   const fallbackThemeName = activeThemePreset?.label
-    ? `${activeThemePreset.label} copy`
-    : "Theme copy";
+    ? `${activeThemePreset.label} ${t("copy")}`
+    : t("themeCopy");
   const colorMode = themeSettings.colorMode || THEME_COLOR_MODES.SYSTEM;
 
   const applyThemePreset = (presetId) => {
@@ -1286,20 +1296,20 @@ function ThemeAppearanceSection({
 
   return (
     <>
-      <ControlSubsection title="Theme">
+      <ControlSubsection title={t("theme")}>
         <Field
-          label="Current"
-          value={themeHasChanged ? "Changed" : "Saved"}
+          label={t("current")}
+          value={themeHasChanged ? t("changed") : t("saved")}
         >
           <Select value={activeThemeId} onValueChange={applyThemePreset}>
             <SelectTrigger
               size="sm"
               className={cn(compactInputClasses, "w-full justify-between")}
-              aria-label="Theme"
+              aria-label={t("theme")}
             >
               <span className="flex min-w-0 items-center gap-2">
                 <PresetSwatch preset={activeThemePreset} />
-                <span className="min-w-0 truncate">{activeThemePreset?.label || "Theme"}</span>
+                <span className="min-w-0 truncate">{activeThemePreset?.label || t("theme")}</span>
               </span>
             </SelectTrigger>
             <SelectContent>
@@ -1313,7 +1323,7 @@ function ThemeAppearanceSection({
           </Select>
         </Field>
 
-        <Field label="Color mode">
+        <Field label={t("colorMode")}>
           <SegmentedControl
             value={colorMode}
             options={COLOR_MODE_OPTIONS}
@@ -1331,7 +1341,7 @@ function ThemeAppearanceSection({
               disabled={!themeHasChanged || typeof handleSaveCustomThemePreset !== "function"}
               onClick={() => setSaveThemeDialogOpen(true)}
             >
-              <span>Save as</span>
+              <span>{t("saveAs")}</span>
               {themeHasChanged ? (
                 <ThemeDirtyIndicator className="absolute right-1.5 top-1.5 h-1.5 w-1.5" />
               ) : null}
@@ -1344,7 +1354,7 @@ function ThemeAppearanceSection({
               disabled={!themeHasChanged || !activeThemeId || !canUpdateActiveTheme || typeof handleUpdateThemePresetSettings !== "function"}
               onClick={handleUpdateTheme}
             >
-              <span>Update</span>
+              <span>{t("update")}</span>
             </Button>
             <Button
               type="button"
@@ -1355,7 +1365,7 @@ function ThemeAppearanceSection({
               onClick={() => handleResetThemeSettings?.()}
             >
               <RotateCcw className="h-3 w-3" strokeWidth={2} aria-hidden="true" />
-              <span>Restore to default</span>
+              <span>{t("restoreToDefault")}</span>
             </Button>
           </div>
         </FileSheetControlRow>
@@ -1371,6 +1381,7 @@ function ThemeAppearanceSection({
 }
 
 function PositionPad({ value, onChange }) {
+  const { t } = useI18n();
   const resolvedX = Number.isFinite(Number(value?.x)) ? Number(value.x) : 0;
   const resolvedZ = Number.isFinite(Number(value?.z)) ? Number(value.z) : 0;
   const [draftPosition, setDraftPosition] = useState({ x: resolvedX, z: resolvedZ });
@@ -1475,7 +1486,7 @@ function PositionPad({ value, onChange }) {
       <div className="flex items-center justify-between text-[10px] text-muted-foreground">
         <span>X {Math.round(x)}</span>
         <span>Z {Math.round(z)}</span>
-        <span>range +/-{extent}</span>
+        <span>{t("positionRange", { extent })}</span>
       </div>
     </div>
   );
@@ -1487,6 +1498,7 @@ export function DisplaySettingsSection({
   clipBounds = null,
   showClip = false
 }) {
+  const { t } = useI18n();
   const normalizedDisplaySettings = useMemo(
     () => normalizeDisplaySettings(displaySettings),
     [displaySettings]
@@ -1574,9 +1586,9 @@ export function DisplaySettingsSection({
   };
 
   return (
-    <Section title="Display" value="display">
-      <ControlSubsection title="Mode">
-        <Field label="Projection">
+    <Section title={t("display")} value="display">
+      <ControlSubsection title={t("mode")}>
+        <Field label={t("projection")}>
           <SegmentedControl
             value={normalizedDisplaySettings.projection}
             onChange={(nextValue) => setDisplay({ projection: nextValue })}
@@ -1584,12 +1596,12 @@ export function DisplaySettingsSection({
           />
         </Field>
 
-        <Field label="Style">
+        <Field label={t("style")}>
           <Select
             value={normalizedDisplaySettings.mode}
             onValueChange={(nextValue) => setDisplay({ mode: nextValue })}
           >
-            <SelectTrigger size="sm" className="h-7 !text-[11px]" aria-label="Display mode">
+            <SelectTrigger size="sm" className="h-7 !text-[11px]" aria-label={t("displayMode")}>
               <span className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                 {SelectedDisplayModeIcon ? (
                   <SelectedDisplayModeIcon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
@@ -1605,10 +1617,10 @@ export function DisplaySettingsSection({
                     key={option.value}
                     value={option.value}
                     className="text-xs"
-                    title={option.title}
+                    title={option.titleKey ? t(option.titleKey) : (option.title || option.label)}
                     icon={Icon ? <Icon className="size-3.5" strokeWidth={2} /> : null}
                   >
-                    {option.label}
+                    {option.labelKey ? t(option.labelKey) : option.label}
                   </SelectItem>
                 );
               })}
@@ -1617,7 +1629,7 @@ export function DisplaySettingsSection({
         </Field>
       </ControlSubsection>
 
-      <ControlSubsection title="Edges">
+      <ControlSubsection title={t("edges")}>
         {EDGE_CLASS_CONTROLS.map((edgeClass) => {
           const settings = normalizedEdgeSettings.classes?.[edgeClass.id] || {};
           const color = settings.color || edgeClass.defaultColor;
@@ -1626,7 +1638,7 @@ export function DisplaySettingsSection({
           return (
             <EdgeClassControlRow
               key={edgeClass.id}
-              label={edgeClass.label}
+              label={edgeClass.labelKey ? t(edgeClass.labelKey) : edgeClass.label}
               color={color}
               thickness={thickness}
               opacity={opacity}
@@ -1638,10 +1650,10 @@ export function DisplaySettingsSection({
         })}
 
         <FileSheetControlRow
-          label="Highlight"
+          label={t("highlight")}
           trailing={(
             <EdgeMetricInput
-              label="Highlight"
+              label={t("highlight")}
               color={normalizedEdgeSettings.highlightColor || CAD_EDGE_HIGHLIGHT_COLOR}
               opacity={normalizedEdgeSettings.highlightOpacity ?? 1}
               thickness={normalizedEdgeSettings.highlightThickness ?? 3}
@@ -1663,24 +1675,24 @@ export function DisplaySettingsSection({
             size="sm"
             className={compactButtonClasses}
             onClick={resetEdges}
-            title="Reset edge display"
+            title={t("resetEdgeDisplay")}
           >
             <RotateCcw className="h-3 w-3" strokeWidth={2} aria-hidden="true" />
-            <span>Reset</span>
+            <span>{t("reset")}</span>
           </Button>
         </FileSheetControlRow>
       </ControlSubsection>
 
-      <ControlSubsection title="Exploded View">
+      <ControlSubsection title={t("explodedView")}>
         <FileSheetToggleRow
-          label="Enabled"
+          label={t("enabled")}
           checked={normalizedExplodedSettings.enabled}
           onCheckedChange={(checked) => setExploded({ enabled: checked })}
         />
 
         {normalizedExplodedSettings.enabled ? (
           <>
-            <Field label="Axis">
+            <Field label={t("axis")}>
               <SegmentedControl
                 value={normalizedExplodedSettings.axis}
                 options={EXPLODED_AXIS_OPTIONS}
@@ -1689,7 +1701,7 @@ export function DisplaySettingsSection({
             </Field>
 
             <FileSheetSliderField
-              label="Spacing"
+              label={t("spacing")}
               value={`${normalizedExplodedSettings.spacing.toFixed(2)}x`}
               onValueCommit={(nextValue) => {
                 setExploded({
@@ -1710,12 +1722,12 @@ export function DisplaySettingsSection({
                 onValueChange={(value) => {
                   setExploded({ spacing: Array.isArray(value) ? value[0] : value });
                 }}
-                aria-label="Exploded spacing"
+                aria-label={t("explodedSpacing")}
               />
             </FileSheetSliderField>
 
             <FileSheetSliderField
-              label="Depth"
+              label={t("depth")}
               value={`${normalizedExplodedSettings.depth}`}
               onValueCommit={(nextValue) => {
                 setExploded({
@@ -1737,18 +1749,18 @@ export function DisplaySettingsSection({
                 onValueChange={(value) => {
                   setExploded({ depth: Array.isArray(value) ? value[0] : value });
                 }}
-                aria-label="Exploded depth"
+                aria-label={t("explodedDepth")}
               />
             </FileSheetSliderField>
 
             <FileSheetToggleRow
-              label="Merge levels"
+              label={t("mergeLevels")}
               checked={normalizedExplodedSettings.mergeCoplanar}
               onCheckedChange={(checked) => setExploded({ mergeCoplanar: checked })}
             />
 
             <FileSheetToggleRow
-              label="Ground base"
+              label={t("groundBase")}
               checked={normalizedExplodedSettings.keepBaseGrounded}
               onCheckedChange={(checked) => setExploded({ keepBaseGrounded: checked })}
             />
@@ -1760,10 +1772,10 @@ export function DisplaySettingsSection({
                 size="sm"
                 className={compactButtonClasses}
                 onClick={() => setExploded(DEFAULT_EXPLODED_VIEW_SETTINGS)}
-                title="Reset exploded view"
+                title={t("resetExplodedView")}
               >
                 <RotateCcw className="h-3 w-3" strokeWidth={2} aria-hidden="true" />
-                <span>Reset</span>
+                <span>{t("reset")}</span>
               </Button>
             </FileSheetControlRow>
           </>
@@ -1771,7 +1783,7 @@ export function DisplaySettingsSection({
       </ControlSubsection>
 
       {showClip ? (
-        <ControlSubsection title="Clip" hideFirstSeparator={false}>
+        <ControlSubsection title={t("clip")} hideFirstSeparator={false}>
           {AXIS_OPTIONS.map((axis) => {
             const axisOffset = normalizedClipSettings.offsets?.[axis] ?? DEFAULT_STEP_CLIP_SETTINGS.offsets[axis];
             const axisSettings = {
@@ -1804,7 +1816,7 @@ export function DisplaySettingsSection({
                 }}
                 valueInputProps={{
                   disabled: !axisRange,
-                  ariaLabel: `Clip ${axis.toUpperCase()} position`
+                  ariaLabel: `${t("clip")} ${axis.toUpperCase()} ${t("position")}`
                 }}
               >
                 <Slider
@@ -1818,7 +1830,7 @@ export function DisplaySettingsSection({
                     const nextOffset = Array.isArray(value) ? value[0] : value;
                     updateClipAxisOffset(axis, nextOffset);
                   }}
-                  aria-label={`Clip ${axis.toUpperCase()} axis`}
+                  aria-label={`${t("clip")} ${axis.toUpperCase()} ${t("axis")}`}
                 />
                 <div className="mt-1 flex justify-between text-[10px] text-[var(--ui-text-muted)]">
                   <span>{formatMm(boundsForAxis.min)}</span>
@@ -1837,10 +1849,10 @@ export function DisplaySettingsSection({
                 className={compactButtonClasses}
                 onClick={() => setClip({ invert: !normalizedClipSettings.invert })}
                 aria-pressed={normalizedClipSettings.invert}
-                title="Flip clip side"
+                title={t("flipClipSide")}
               >
                 <FlipHorizontal2 className="h-3 w-3" strokeWidth={2} aria-hidden="true" />
-                <span>Flip</span>
+                <span>{t("flip")}</span>
               </Button>
               <Button
                 type="button"
@@ -1848,10 +1860,10 @@ export function DisplaySettingsSection({
                 size="sm"
                 className={compactButtonClasses}
                 onClick={() => setDisplay({ clip: normalizeStepClipSettings(DEFAULT_STEP_CLIP_SETTINGS) })}
-                title="Reset clip plane"
+                title={t("resetClipPlane")}
               >
                 <RotateCcw className="h-3 w-3" strokeWidth={2} aria-hidden="true" />
-                <span>Reset</span>
+                <span>{t("reset")}</span>
               </Button>
             </div>
           </FileSheetControlRow>
@@ -1871,6 +1883,7 @@ export function ThemeSettingsSections({
   handleSaveCustomThemePreset,
   handleUpdateThemePresetSettings
 }) {
+  const { t } = useI18n();
   const [activePrimaryLight, setActivePrimaryLight] = useState("directional");
   const activeThemePreset = useMemo(
     () => resolveActiveThemePreset(themePresets, themePresetId, themeSettings),
@@ -1879,7 +1892,7 @@ export function ThemeSettingsSections({
   const themeHasChanged = themeSettingsChangedFromPreset(activeThemePreset, themeSettings);
   const appearanceTitle = (
     <span className="flex min-w-0 items-center gap-2">
-      <span>Appearance</span>
+      <span>{t("appearance")}</span>
       {themeHasChanged ? <ThemeDirtyIndicator className="h-1.5 w-1.5" /> : null}
     </span>
   );
@@ -2018,8 +2031,8 @@ export function ThemeSettingsSections({
         handleUpdateThemePresetSettings={handleUpdateThemePresetSettings}
       />
 
-      <ControlSubsection title="Surface">
-        <Field label="Colors" value={`${resolveFillColors(themeSettings.materials).length}/${MAX_THEME_FILL_COLORS}`}>
+      <ControlSubsection title={t("surface")}>
+        <Field label={t("colors")} value={`${resolveFillColors(themeSettings.materials).length}/${MAX_THEME_FILL_COLORS}`}>
           <FillColorEditor
             colors={resolveFillColors(themeSettings.materials)}
             cycleColors={themeSettings.materials.cycleColors === true}
@@ -2031,18 +2044,18 @@ export function ThemeSettingsSections({
         </Field>
 
         <ThemeToggleRow
-          label="Cycle colors"
+          label={t("cycleColors")}
           checked={themeSettings.materials.cycleColors === true}
           onChange={(nextValue) => setMaterials({ cycleColors: nextValue })}
         />
 
         <ThemeToggleRow
-          label="Override colors"
+          label={t("overrideColors")}
           checked={themeSettings.materials.overrideSourceColors === true}
           onChange={(nextValue) => setMaterials({ overrideSourceColors: nextValue })}
         />
 
-        <SliderField label="Saturation" value={formatNumber(themeSettings.materials.saturation)}>
+        <SliderField label={t("saturation")} value={formatNumber(themeSettings.materials.saturation)}>
           <SliderInput
             value={themeSettings.materials.saturation}
             min={0}
@@ -2052,7 +2065,7 @@ export function ThemeSettingsSections({
           />
         </SliderField>
 
-        <SliderField label="Contrast" value={formatNumber(themeSettings.materials.contrast)}>
+        <SliderField label={t("contrast")} value={formatNumber(themeSettings.materials.contrast)}>
           <SliderInput
             value={themeSettings.materials.contrast}
             min={0}
@@ -2062,7 +2075,7 @@ export function ThemeSettingsSections({
           />
         </SliderField>
 
-        <SliderField label="Brightness" value={formatNumber(themeSettings.materials.brightness)}>
+        <SliderField label={t("brightness")} value={formatNumber(themeSettings.materials.brightness)}>
           <SliderInput
             value={themeSettings.materials.brightness}
             min={0}
@@ -2073,8 +2086,8 @@ export function ThemeSettingsSections({
         </SliderField>
       </ControlSubsection>
 
-      <ControlSubsection title="Backdrop">
-        <Field label="Style">
+      <ControlSubsection title={t("backdrop")}>
+        <Field label={t("style")}>
           <SegmentedControl
             value={themeSettings.background.type}
             onChange={(nextValue) => setBackground({ type: nextValue })}
@@ -2084,7 +2097,7 @@ export function ThemeSettingsSections({
 
         {themeSettings.background.type === "solid" ? (
           <ColorModeField
-            label="Color"
+            label={t("color")}
             path={["background", "solidColor"]}
             {...themeColorFieldProps}
           />
@@ -2093,16 +2106,16 @@ export function ThemeSettingsSections({
         {themeSettings.background.type === "linear" ? (
           <>
             <ColorModeField
-              label="Start color"
+              label={t("startColor")}
               path={["background", "linearStart"]}
               {...themeColorFieldProps}
             />
             <ColorModeField
-              label="End color"
+              label={t("endColor")}
               path={["background", "linearEnd"]}
               {...themeColorFieldProps}
             />
-            <SliderField label="Angle" value={`${formatNumber(themeSettings.background.linearAngle, 0)} deg`}>
+            <SliderField label={t("angle")} value={`${formatNumber(themeSettings.background.linearAngle, 0)} deg`}>
               <SliderInput
                 value={themeSettings.background.linearAngle}
                 min={-360}
@@ -2117,12 +2130,12 @@ export function ThemeSettingsSections({
         {themeSettings.background.type === "radial" ? (
           <>
             <ColorModeField
-              label="Inner color"
+              label={t("innerColor")}
               path={["background", "radialInner"]}
               {...themeColorFieldProps}
             />
             <ColorModeField
-              label="Outer color"
+              label={t("outerColor")}
               path={["background", "radialOuter"]}
               {...themeColorFieldProps}
             />
@@ -2131,23 +2144,23 @@ export function ThemeSettingsSections({
       </ControlSubsection>
 
       <ControlSubsection
-        title="Floor"
+        title={t("floor")}
         trailing={(
           <FileSheetBooleanToggle
             checked={themeSettings.floor?.enabled === true}
             onCheckedChange={(nextValue) => setFloor({ enabled: nextValue })}
-            ariaLabel="Enable floor"
+            ariaLabel={t("enableFloor")}
           />
         )}
       >
         {themeSettings.floor?.enabled === true ? (
           <>
             <ColorModeField
-              label="Color"
+              label={t("color")}
               path={["floor", "color"]}
               {...themeColorFieldProps}
             />
-            <SliderField label="Roughness" value={formatNumber(themeSettings.floor?.roughness ?? 0.72)}>
+            <SliderField label={t("roughness")} value={formatNumber(themeSettings.floor?.roughness ?? 0.72)}>
               <SliderInput
                 value={themeSettings.floor?.roughness ?? 0.72}
                 min={0}
@@ -2156,7 +2169,7 @@ export function ThemeSettingsSections({
                 onChange={(nextValue) => setFloor({ roughness: nextValue })}
               />
             </SliderField>
-            <SliderField label="Reflectivity" value={formatNumber(themeSettings.floor?.reflectivity ?? 0.12)}>
+            <SliderField label={t("reflectivity")} value={formatNumber(themeSettings.floor?.reflectivity ?? 0.12)}>
               <SliderInput
                 value={themeSettings.floor?.reflectivity ?? 0.12}
                 min={0}
@@ -2165,7 +2178,7 @@ export function ThemeSettingsSections({
                 onChange={(nextValue) => setFloor({ reflectivity: nextValue })}
               />
             </SliderField>
-            <SliderField label="Shadow" value={formatNumber(themeSettings.floor?.shadowOpacity ?? 0.45)}>
+            <SliderField label={t("shadow")} value={formatNumber(themeSettings.floor?.shadowOpacity ?? 0.45)}>
               <SliderInput
                 value={themeSettings.floor?.shadowOpacity ?? 0.45}
                 min={0}
@@ -2174,7 +2187,7 @@ export function ThemeSettingsSections({
                 onChange={(nextValue) => setFloor({ shadowOpacity: nextValue })}
               />
             </SliderField>
-            <SliderField label="Backdrop blend" value={formatNumber(themeSettings.floor?.horizonBlend ?? 0)}>
+            <SliderField label={t("backdropBlend")} value={formatNumber(themeSettings.floor?.horizonBlend ?? 0)}>
               <SliderInput
                 value={themeSettings.floor?.horizonBlend ?? 0}
                 min={0}
@@ -2188,33 +2201,33 @@ export function ThemeSettingsSections({
       </ControlSubsection>
 
       <ControlSubsection
-        title="Grid"
+        title={t("grid")}
         trailing={(
           <FileSheetBooleanToggle
             checked={themeSettings.floor?.grid?.enabled === true}
             onCheckedChange={(nextValue) => setFloorGrid({ enabled: nextValue })}
-            ariaLabel="Enable grid"
+            ariaLabel={t("enableGrid")}
           />
         )}
       >
         {themeSettings.floor?.grid?.enabled === true ? (
           <>
             <ColorModeField
-              label="Floor color"
+              label={t("floorColor")}
               path={["floor", "color"]}
               {...themeColorFieldProps}
             />
             <ColorModeField
-              label="Center line"
+              label={t("centerLine")}
               path={["floor", "grid", "centerColor"]}
               {...themeColorFieldProps}
             />
             <ColorModeField
-              label="Cell line"
+              label={t("cellLine")}
               path={["floor", "grid", "cellColor"]}
               {...themeColorFieldProps}
             />
-            <SliderField label="Line opacity" value={formatNumber(themeSettings.floor?.grid?.opacity ?? 0.18)}>
+            <SliderField label={t("lineOpacity")} value={formatNumber(themeSettings.floor?.grid?.opacity ?? 0.18)}>
               <SliderInput
                 value={themeSettings.floor?.grid?.opacity ?? 0.18}
                 min={0}
@@ -2223,7 +2236,7 @@ export function ThemeSettingsSections({
                 onChange={(nextValue) => setFloorGrid({ opacity: nextValue })}
               />
             </SliderField>
-            <SliderField label="Density" value={formatNumber(themeSettings.floor?.grid?.density ?? 1)}>
+            <SliderField label={t("density")} value={formatNumber(themeSettings.floor?.grid?.density ?? 1)}>
               <SliderInput
                 value={themeSettings.floor?.grid?.density ?? 1}
                 min={0.25}
@@ -2236,13 +2249,13 @@ export function ThemeSettingsSections({
         ) : null}
       </ControlSubsection>
 
-      <ControlSubsection title="Lighting">
+      <ControlSubsection title={t("lighting")}>
         <ThemeToggleRow
-          label="Environment light"
+          label={t("environmentLight")}
           checked={themeSettings.environment.enabled}
           onChange={(nextValue) => setEnvironment({ enabled: nextValue })}
         />
-        <SliderField label="Environment intensity" value={formatNumber(themeSettings.environment.intensity)}>
+        <SliderField label={t("environmentIntensity")} value={formatNumber(themeSettings.environment.intensity)}>
           <SliderInput
             value={themeSettings.environment.intensity}
             min={0}
@@ -2252,7 +2265,7 @@ export function ThemeSettingsSections({
           />
         </SliderField>
 
-        <SliderField label="Tone mapping" value={formatNumber(themeSettings.lighting.toneMappingExposure)}>
+        <SliderField label={t("toneMapping")} value={formatNumber(themeSettings.lighting.toneMappingExposure)}>
           <SliderInput
             value={themeSettings.lighting.toneMappingExposure}
             min={0.05}
@@ -2262,13 +2275,13 @@ export function ThemeSettingsSections({
           />
         </SliderField>
 
-        <NestedControlGroup title="Primary">
+        <NestedControlGroup title={t("primary")}>
           <Tabs value={activePrimaryLight} onValueChange={setActivePrimaryLight} className="gap-0">
             <div className="px-3 py-1">
               <TabsList className="grid h-7 w-full grid-cols-3 rounded-md p-0.5">
                 {PRIMARY_LIGHT_OPTIONS.map((option) => (
                   <TabsTrigger key={option.value} value={option.value} className="text-[11px]">
-                    {option.label}
+                    {t(option.labelKey)}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -2285,16 +2298,16 @@ export function ThemeSettingsSections({
                   data-file-sheet-row-stack=""
                 >
                   <ThemeToggleRow
-                    label={`${option.label} light`}
+                    label={`${t(option.labelKey)} ${t("light")}`}
                     checked={light.enabled}
                     onChange={(nextValue) => setLightConfig(option.value, { enabled: nextValue })}
                   />
                   <ColorModeField
-                    label="Color"
+                    label={t("color")}
                     path={["lighting", option.value, "color"]}
                     {...themeColorFieldProps}
                   />
-                  <SliderField label="Intensity" value={formatNumber(light.intensity)}>
+                  <SliderField label={t("intensity")} value={formatNumber(light.intensity)}>
                     <SliderInput
                       value={light.intensity}
                       min={0}
@@ -2304,7 +2317,7 @@ export function ThemeSettingsSections({
                     />
                   </SliderField>
                   {option.value === "spot" ? (
-                    <SliderField label="Angle" value={formatNumber(light.angle)}>
+                    <SliderField label={t("angle")} value={formatNumber(light.angle)}>
                       <SliderInput
                         value={light.angle}
                         min={0.01}
@@ -2315,7 +2328,7 @@ export function ThemeSettingsSections({
                     </SliderField>
                   ) : null}
                   {supportsDistance ? (
-                    <SliderField label="Distance" value={formatNumber(light.distance, 0)}>
+                    <SliderField label={t("distance")} value={formatNumber(light.distance, 0)}>
                       <SliderInput
                         value={light.distance}
                         min={0}
@@ -2325,13 +2338,13 @@ export function ThemeSettingsSections({
                       />
                     </SliderField>
                   ) : null}
-                  <Field label="Position (X/Z)">
+                  <Field label={t("positionXZ")}>
                     <PositionPad
                       value={light.position}
                       onChange={(axis, nextValue) => setLightPosition(option.value, axis, nextValue)}
                     />
                   </Field>
-                  <SliderField label="Height (Y)" value={formatNumber(light.position.y, 0)}>
+                  <SliderField label={t("heightY")} value={formatNumber(light.position.y, 0)}>
                     <SliderInput
                       value={light.position.y}
                       min={-5000}
@@ -2346,18 +2359,18 @@ export function ThemeSettingsSections({
           </Tabs>
         </NestedControlGroup>
 
-        <NestedControlGroup title="Ambient">
+        <NestedControlGroup title={t("ambient")}>
           <ThemeToggleRow
-            label="Ambient light"
+            label={t("ambientLight")}
             checked={themeSettings.lighting.ambient.enabled}
             onChange={(nextValue) => setLightConfig("ambient", { enabled: nextValue })}
           />
           <ColorModeField
-            label="Ambient color"
+            label={t("ambientColor")}
             path={["lighting", "ambient", "color"]}
             {...themeColorFieldProps}
           />
-          <SliderField label="Ambient intensity" value={formatNumber(themeSettings.lighting.ambient.intensity)}>
+          <SliderField label={t("ambientIntensity")} value={formatNumber(themeSettings.lighting.ambient.intensity)}>
             <SliderInput
               value={themeSettings.lighting.ambient.intensity}
               min={0}
@@ -2368,23 +2381,23 @@ export function ThemeSettingsSections({
           </SliderField>
         </NestedControlGroup>
 
-        <NestedControlGroup title="Hemisphere">
+        <NestedControlGroup title={t("hemisphere")}>
           <ThemeToggleRow
-            label="Hemisphere light"
+            label={t("hemisphereLight")}
             checked={themeSettings.lighting.hemisphere.enabled}
             onChange={(nextValue) => setLightConfig("hemisphere", { enabled: nextValue })}
           />
           <ColorModeField
-            label="Sky color"
+            label={t("skyColor")}
             path={["lighting", "hemisphere", "skyColor"]}
             {...themeColorFieldProps}
           />
           <ColorModeField
-            label="Ground color"
+            label={t("groundColor")}
             path={["lighting", "hemisphere", "groundColor"]}
             {...themeColorFieldProps}
           />
-          <SliderField label="Hemisphere intensity" value={formatNumber(themeSettings.lighting.hemisphere.intensity)}>
+          <SliderField label={t("hemisphereIntensity")} value={formatNumber(themeSettings.lighting.hemisphere.intensity)}>
             <SliderInput
               value={themeSettings.lighting.hemisphere.intensity}
               min={0}
@@ -2413,10 +2426,11 @@ export default function ThemeSettingsPopover({
   handleSaveCustomThemePreset,
   handleUpdateThemePresetSettings
 }) {
+  const { t } = useI18n();
   return (
     <FileSheet
       open={open}
-      title="Theme"
+      title={t("theme")}
       isDesktop={isDesktop}
       width={width}
       onStartResize={onStartResize}

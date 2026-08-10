@@ -34,6 +34,7 @@ import {
   SheetHeader as SheetHeaderPrimitive,
   SheetTitle
 } from "@/components/ui/sheet";
+import { useI18n } from "@/i18n";
 import {
   SidebarContent,
   SidebarGroup,
@@ -328,6 +329,7 @@ function DirectoryNode({
 
 function SidebarResizeHandle({ onStartResize }) {
   const { isMobile, state } = useSidebar();
+  const { t } = useI18n();
 
   if (isMobile || state !== "expanded" || typeof onStartResize !== "function") {
     return null;
@@ -338,8 +340,8 @@ function SidebarResizeHandle({ onStartResize }) {
       type="button"
       variant="ghost"
       size="sm"
-      aria-label="Resize file viewer sidebar"
-      title="Resize sidebar"
+      aria-label={t("resizeFileSidebar")}
+      title={t("resizeSidebar")}
       onPointerDown={onStartResize}
       className="group/sidebar-resize absolute inset-y-0 -right-1.5 z-30 flex h-auto w-3 cursor-col-resize touch-none items-stretch justify-center rounded-none px-0 py-0 hover:bg-transparent"
     >
@@ -490,6 +492,7 @@ function FileViewerContents({
   const hasEntries = catalogEntries.length > 0;
   const catalogErrorMessage = String(catalogError || "").trim();
   const catalogLoading = !catalogHydrated || (catalogRefreshing && !hasEntries);
+  const { t } = useI18n();
 
   return (
     <>
@@ -501,10 +504,10 @@ function FileViewerContents({
         />
         <SidebarInput
           type="search"
-          placeholder="Search files, ids, or paths..."
+          placeholder={t("searchFilesPlaceholder")}
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          aria-label="Search CAD files"
+          aria-label={t("searchCadFiles")}
           className="h-7 text-xs md:text-xs"
         />
       </SidebarHeader>
@@ -577,13 +580,13 @@ function FileViewerContents({
                   })}
                 </SidebarMenu>
               ) : catalogErrorMessage && !hasEntries ? (
-                <p className="px-2 py-3 text-xs text-muted-foreground">CAD catalog unavailable: {catalogErrorMessage}</p>
+                <p className="px-2 py-3 text-xs text-muted-foreground">{t("catalogUnavailable", { message: catalogErrorMessage })}</p>
               ) : catalogLoading ? (
-                <p className="px-2 py-3 text-xs text-muted-foreground">Loading CAD catalog...</p>
+                <p className="px-2 py-3 text-xs text-muted-foreground">{t("loadingCatalog")}</p>
               ) : hasEntries ? (
-                <p className="px-2 py-3 text-xs text-muted-foreground">No CAD entries match this filter.</p>
+                <p className="px-2 py-3 text-xs text-muted-foreground">{t("noEntriesFilter")}</p>
               ) : (
-                <p className="px-2 py-3 text-xs text-muted-foreground">No CAD entries found.</p>
+                <p className="px-2 py-3 text-xs text-muted-foreground">{t("noEntries")}</p>
               )}
             </SidebarGroupContent>
           </SidebarGroup>
@@ -631,6 +634,7 @@ export default function FileViewerSidebar({
   resizable = true,
   onStartResize
 }) {
+  const { t } = useI18n();
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
   if (previewMode) {
@@ -689,8 +693,8 @@ export default function FileViewerSidebar({
           }}
         >
           <SheetHeaderPrimitive className="sr-only">
-            <SheetTitle>CAD Viewer</SheetTitle>
-            <SheetDescription>Browse files in the CAD catalog.</SheetDescription>
+            <SheetTitle>{t("cadViewerBrand")}</SheetTitle>
+            <SheetDescription>{t("browseCadCatalog")}</SheetDescription>
           </SheetHeaderPrimitive>
           <div className="flex h-full min-h-0 w-full flex-col" aria-label="CAD Viewer">
             {content}

@@ -7,11 +7,13 @@ import {
 } from "@/components/ui/context-menu";
 import { fileAccessAssetsForEntry } from "@/workbench/fileAccessAssets";
 import { IMPLICIT_EXPORT_FORMATS } from "@/workbench/implicitExport";
+import { useI18n } from "@/i18n";
 
 function ExplorerViewSection({
   entry,
   onRevealInExplorerView
 }) {
+  const { t } = useI18n();
   if (typeof onRevealInExplorerView !== "function") {
     return null;
   }
@@ -23,7 +25,7 @@ function ExplorerViewSection({
         onRevealInExplorerView(entry);
       }}
     >
-      <span className="min-w-0 truncate">Reveal in Explorer View</span>
+      <span className="min-w-0 truncate">{t("revealInExplorerView")}}</span>
     </ContextMenuItem>
   );
 }
@@ -40,6 +42,7 @@ function FileAccessSection({
   onRevealInExplorerView,
   onCopyFileAssetReference
 }) {
+  const { t } = useI18n();
   if (!asset) {
     return null;
   }
@@ -58,7 +61,7 @@ function FileAccessSection({
             onRevealFileAsset(entry, asset.asset, asset);
           }}
         >
-          <span className="min-w-0 truncate">Reveal in Folder</span>
+          <span className="min-w-0 truncate">{t("revealInFolder")}}</span>
         </ContextMenuItem>
       ) : null}
       <ExplorerViewSection
@@ -73,7 +76,7 @@ function FileAccessSection({
               onCopyFileAssetReference(entry, asset.asset, asset, "path");
             }}
           >
-            <span className="min-w-0 truncate">Copy Path</span>
+            <span className="min-w-0 truncate">{t("copyPath")}}</span>
           </ContextMenuItem>
           <ContextMenuItem
             className="text-xs"
@@ -81,7 +84,7 @@ function FileAccessSection({
               onCopyFileAssetReference(entry, asset.asset, asset, "relativePath");
             }}
           >
-            <span className="min-w-0 truncate">Copy Relative Path</span>
+            <span className="min-w-0 truncate">{t("copyRelativePath")}}</span>
           </ContextMenuItem>
         </>
       ) : null}
@@ -92,7 +95,7 @@ function FileAccessSection({
             onCopyFileAssetReference(entry, asset.asset, asset, "link");
           }}
         >
-          <span className="min-w-0 truncate">Copy Link</span>
+          <span className="min-w-0 truncate">{t("copyLink")}}</span>
         </ContextMenuItem>
       ) : null}
       <ContextMenuItem
@@ -101,7 +104,7 @@ function FileAccessSection({
           onDownloadFileAsset(entry, asset.asset, asset);
         }}
       >
-        <span className="min-w-0 truncate">Download</span>
+        <span className="min-w-0 truncate">{t("download")}}</span>
       </ContextMenuItem>
     </>
   );
@@ -155,6 +158,7 @@ export default function FileAccessContextMenu({
   onCopyFileAssetReference,
   children
 }) {
+  const { t } = useI18n();
   const revealInExplorerViewAvailable = entry && typeof onRevealInExplorerView === "function";
   const assetActionsAvailable = entry && typeof onDownloadFileAsset === "function";
   const implicitExportAvailable = entry && typeof onExportImplicitFile === "function" &&

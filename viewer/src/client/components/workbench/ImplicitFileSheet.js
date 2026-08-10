@@ -6,10 +6,11 @@ import FileMetadataSection from "./FileMetadataSection";
 import FileStatusSection from "./FileStatusSection";
 import ImplicitGraphicsSection from "./ImplicitGraphicsSection";
 import ParameterControlsSection from "./ParameterControlsSection";
+import { useI18n } from "@/i18n";
 
 export default function ImplicitFileSheet({
   open,
-  title = "Implicit CAD",
+  title,
   isDesktop,
   width,
   selectedEntry = null,
@@ -28,10 +29,11 @@ export default function ImplicitFileSheet({
   openSectionIds = [],
   onOpenSectionIdsChange
 }) {
+  const { t } = useI18n();
   return (
     <FileSheet
       open={open}
-      title={title}
+      title={title ?? t("implicitCad")}
       isDesktop={isDesktop}
       width={width}
       onOpenChange={onOpenChange}
@@ -46,13 +48,13 @@ export default function ImplicitFileSheet({
         <FileStatusSection items={statusItems} />
         <ParameterControlsSection
           runtime={parameterRuntime}
-          label="implicit parameter"
-          loadingLabel="Loading implicit parameters..."
-          noParametersLabel="No implicit parameters."
+          label={t("implicitParameter")}
+          loadingLabel={t("loadingImplicitParameters")}
+          noParametersLabel={t("noImplicitParameters")}
           hideWhenEmpty
-          animationAriaLabel="Implicit animation"
-          copyTitle="Copy implicit parameter JSON"
-          pasteTitle="Paste implicit parameter JSON"
+          animationAriaLabel={t("implicitAnimation")}
+          copyTitle={t("copyImplicitParameterJson")}
+          pasteTitle={t("pasteImplicitParameterJson")}
         />
         <ImplicitGraphicsSection runtime={graphicsRuntime} />
         {themeSections}

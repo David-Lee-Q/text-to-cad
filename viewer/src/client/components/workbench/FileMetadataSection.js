@@ -4,6 +4,7 @@ import { cn } from "@/ui/utils";
 import { copyTextToClipboard } from "@/ui/clipboard";
 import { FILE_SHEET_SECTION_IDS } from "@/workbench/fileSheetSections";
 import { fileMetadataGroupsForEntry } from "@/workbench/fileMetadata";
+import { useI18n } from "@/i18n";
 import {
   FILE_SHEET_FIELD_LABEL_CLASSES,
   FileSheetSection,
@@ -134,6 +135,7 @@ export default function FileMetadataSection({
   onOpenFileAsset,
   suppressDynamicStatus = false
 }) {
+  const { t } = useI18n();
   const groups = fileMetadataGroupsForEntry(entry, {
     includeFileDownloadActions: fileDownloadAvailable && !localFileOpenAvailable,
     includeFileOpenActions: localFileOpenAvailable,
@@ -148,8 +150,8 @@ export default function FileMetadataSection({
   return (
     <FileSheetSection
       value={FILE_SHEET_SECTION_IDS.FILE_METADATA}
-      title="Metadata"
-      aria-label="File metadata"
+      title={t("metadata")}
+      aria-label={t("fileMetadata")}
     >
       <div>
         {groups.map((group) => (

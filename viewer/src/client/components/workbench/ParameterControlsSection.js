@@ -11,6 +11,7 @@ import {
   SelectValue
 } from "../ui/select";
 import { Slider } from "../ui/slider";
+import { useI18n } from "@/i18n";
 import {
   FILE_SHEET_COMPACT_BUTTON_CLASSES,
   FILE_SHEET_COMPACT_INPUT_CLASSES,
@@ -58,19 +59,20 @@ function parseAnimationSpeedInput(value, fallbackValue = 1) {
 
 export default function ParameterControlsSection({
   value = "parameters",
-  title = "Parameters",
+  title,
   runtime = null,
   label = "parameter",
-  loadingLabel = "Loading parameters...",
-  noParametersLabel = "No parameters.",
+  loadingLabel,
+  noParametersLabel,
   hideWhenEmpty = false,
   showEnableToggle = false,
-  enableLabel = "Enable",
-  animationAriaLabel = "Animation",
-  copyTitle = "Copy parameter JSON",
-  pasteTitle = "Paste parameter JSON",
-  resetTitle = "Reset parameters"
+  enableLabel,
+  animationAriaLabel,
+  copyTitle,
+  pasteTitle,
+  resetTitle
 }) {
+  const { t } = useI18n();
   const definition = runtime?.definition || null;
   const parameters = Array.isArray(definition?.parameters) ? definition.parameters : [];
   const animations = Array.isArray(definition?.animations) ? definition.animations : [];
@@ -91,19 +93,19 @@ export default function ParameterControlsSection({
   }
 
   return (
-    <FileSheetSection value={value} title={title}>
+    <FileSheetSection value={value} title={title ?? t("parameters")}>
       <FileSheetSectionBody>
         {definition && showEnableToggle ? (
           <FileSheetToggleRow
-            label={enableLabel}
+            label={enableLabel ?? t("enable")}
             checked={enabled}
             onCheckedChange={(checked) => runtime?.onEnabledChange?.(checked)}
-            ariaLabel={enableLabel}
+            ariaLabel={enableLabel ?? t("enable")}
           />
         ) : null}
 
         {status === "loading" ? (
-          <p className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">{loadingLabel}</p>
+          <p className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">{loadingLabel ?? t("loadingParameters")}</p>
         ) : null}
         {error ? (
           <p className="whitespace-pre-line px-3 py-2 text-xs text-destructive">{error}</p>
@@ -112,13 +114,13 @@ export default function ParameterControlsSection({
         {definition && animations.length ? (
           <>
             {animations.length > 1 ? (
-              <FileSheetControlRow label="Animation">
+              <FileSheetControlRow label={t("animation")}>
                 <Select
                   value={String(animationState.activeId || animations[0]?.id || "")}
                   onValueChange={(nextValue) => runtime?.onAnimationSelect?.(nextValue)}
                   disabled={!enabled}
                 >
-                  <SelectTrigger size="sm" className="h-7 !text-[11px]" aria-label={animationAriaLabel}>
+                  <SelectTrigger size="sm" className="h-7 !text-[11px]" aria-label={animationAriaLabel ?? t("animation")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -140,15 +142,15 @@ export default function ParameterControlsSection({
                   className={cn(compactButtonClasses, "justify-center")}
                   onClick={() => runtime?.onAnimationPlayToggle?.()}
                   disabled={!enabled}
-                  aria-label={`${animationState.playing ? "Pause" : "Play"} ${label} animation`}
-                  title={`${animationState.playing ? "Pause" : "Play"} ${label} animation`}
+                  aria-label={`${animationState.playing ? t("pause") : t("play")} ${label} animation`}
+                  title={`${animationState.playing ? t("pause") : t("play")} ${label} animation`}
                 >
                   {animationState.playing ? (
                     <Pause className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
                   ) : (
                     <Play className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
                   )}
-                  <span>{animationState.playing ? "Pause" : "Play"}</span>
+                  <span>{animationState.playing ? t("pause") : t("play")}</span>
                 </Button>
                 <Button
                   type="button"
@@ -157,16 +159,16 @@ export default function ParameterControlsSection({
                   className={cn(compactButtonClasses, "justify-center")}
                   onClick={() => runtime?.onAnimationReset?.()}
                   disabled={!enabled}
-                  aria-label={`Restart ${label} animation`}
-                  title="Restart"
+                  aria-label={t("restart")}
+                  title={t("restart")}
                 >
                   <RotateCcw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-                  <span>Reset</span>
+                  <span>{t("reset")}</span>
                 </Button>
               </div>
             </FileSheetControlRow>
             <FileSheetSliderField
-              label="Time"
+              label={t("time")}
               value={formatSeconds(animationState.elapsedSec)}
               onValueCommit={(nextValue) => {
                 runtime?.onAnimationScrub?.(parseFileSheetNumberInput(nextValue, {
@@ -192,7 +194,7 @@ export default function ParameterControlsSection({
               />
             </FileSheetSliderField>
             <FileSheetSliderField
-              label="Speed"
+              label={t("speed")}
               value={`${formatControlNumber(animationState.speed || 1)}x`}
               onValueCommit={(nextValue) => {
                 runtime?.onAnimationSpeedChange?.(
@@ -219,7 +221,7 @@ export default function ParameterControlsSection({
         ) : null}
 
         {definition && !parameters.length ? (
-          <p className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">{noParametersLabel}</p>
+          <p className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">{noParametersLabel ?? t("noParameters")}</p>
         ) : null}
         {parameters.map((parameter) => {
           const currentValue = values?.[parameter.id] ?? parameter.defaultValue;
@@ -356,7 +358,7 @@ export default function ParameterControlsSection({
                   title={copyTitle}
                 >
                   <Copy className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-                  <span>Copy parameters</span>
+                  <span>{t("copyParameters")}</span>
                 </Button>
                 <Button
                   type="button"
@@ -369,7 +371,7 @@ export default function ParameterControlsSection({
                   title={pasteTitle}
                 >
                   <ClipboardPaste className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-                  <span>Paste parameters</span>
+                  <span>{t("pasteParameters")}</span>
                 </Button>
               </div>
             </FileSheetControlRow>
@@ -384,7 +386,7 @@ export default function ParameterControlsSection({
                   title={resetTitle}
                 >
                   <RotateCcw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-                  <span>Reset parameters</span>
+                  <span>{t("resetParameters")}</span>
                 </Button>
               </FileSheetControlRow>
             ) : null}

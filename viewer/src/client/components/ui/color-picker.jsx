@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useI18n } from "@/i18n"
 import { Pipette } from "lucide-react"
 
 import { cn } from "@/ui/utils"
@@ -234,6 +235,8 @@ function ColorPicker({
   disabled = false,
   ...props
 }) {
+  const { t } = useI18n();
+
   const normalizedValue = normalizeHexColor(value)
   const normalizedOpacity = Number.isFinite(Number(opacity)) ? clamp(Number(opacity), 0, 1) : 1
   const [format, setFormat] = React.useState("hex")
@@ -364,8 +367,8 @@ function ColorPicker({
           ref={svPlaneRef}
           role="slider"
           tabIndex={0}
-          aria-label="Saturation and brightness"
-          aria-valuetext={`${Math.round(colorNumbers.hsv.s)}% saturation, ${Math.round(colorNumbers.hsv.v)}% brightness`}
+          aria-label={t("saturationAndBrightness")}
+          aria-valuetext={`${Math.round(colorNumbers.hsv.s)}% ${t("saturation")}, ${Math.round(colorNumbers.hsv.v)}% ${t("brightness")}`}
           className="relative h-32 touch-none overflow-hidden rounded-md border shadow-inner outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           style={{
             backgroundColor: svColor,
@@ -392,7 +395,7 @@ function ColorPicker({
           ref={hueTrackRef}
           role="slider"
           tabIndex={0}
-          aria-label="Hue"
+          aria-label={t("hue")}
           aria-valuemin={0}
           aria-valuemax={360}
           aria-valuenow={Math.round(hue)}
@@ -431,7 +434,7 @@ function ColorPicker({
                   onOpacityChange?.(clamp(event.currentTarget.value, 0, 100) / 100)
                 }}
                 className="h-7 px-1.5 text-[11px]"
-                aria-label="Color opacity"
+                aria-label={t("colorOpacity")}
               />
               <span className="text-[10px] font-medium text-muted-foreground">%</span>
             </div>
@@ -465,7 +468,7 @@ function ColorPicker({
                 }
               }}
               className="h-7 px-1.5 text-[11px] font-mono uppercase"
-              aria-label="Hex color"
+              aria-label={t("hexColor")}
             />
             {canUseEyeDropper ? (
               <Button
@@ -473,8 +476,8 @@ function ColorPicker({
                 variant="outline"
                 size="icon-sm"
                 onClick={pickFromScreen}
-                aria-label="Pick color from screen"
-                title="Pick color from screen"
+                aria-label={t("pickColorFromScreen")}
+                title={t("pickColorFromScreen")}
               >
                 <Pipette className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
               </Button>

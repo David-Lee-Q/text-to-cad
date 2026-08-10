@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { useI18n } from "@/i18n";
 import {
   CAMERA_PROJECTION,
   normalizeCameraProjection
@@ -26,12 +27,14 @@ const PROJECTION_MODE_OPTIONS = Object.freeze([
   Object.freeze({
     value: CAMERA_PROJECTION.ORTHOGRAPHIC,
     label: "Orthographic projection",
+    labelKey: "projOrthographic",
     title: "Switch to orthographic projection",
     Icon: OrthographicProjectionIcon
   }),
   Object.freeze({
     value: CAMERA_PROJECTION.PERSPECTIVE,
     label: "Perspective projection",
+    labelKey: "projPerspective",
     title: "Switch to perspective projection",
     Icon: PerspectiveProjectionIcon
   })
@@ -43,6 +46,9 @@ export function projectionOptionForValue(value) {
 }
 
 export function projectionMenuLabel(option) {
+  if (option?.labelKey) {
+    return null;
+  }
   return String(option?.label || "").replace(/\s+projection$/i, "") || "Perspective";
 }
 
@@ -59,12 +65,13 @@ export function DisplayProjectionControl({
   contentSide = "bottom",
   contentSideOffset = 6
 }) {
+  const { t } = useI18n();
   const showDisplayModeSection = typeof onDisplayModeChange === "function";
   const showProjectionSection = typeof onProjectionChange === "function";
   const selectedOption = displayModeOptionForValue(displayMode);
   const selectedProjectionOption = projectionOptionForValue(projection);
   const SelectedProjectionIcon = selectedProjectionOption.Icon || PerspectiveProjectionIcon;
-  const label = `Display and projection: ${selectedOption?.label || "Solid"}, ${projectionMenuLabel(selectedProjectionOption)}`;
+  const label = `${t("displayAndProjection")}: ${selectedOption?.labelKey ? t(selectedOption.labelKey) : (selectedOption?.label || t("displaySolid"))}, ${projectionMenuLabel(selectedProjectionOption)}`;
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
@@ -84,7 +91,7 @@ export function DisplayProjectionControl({
         {showProjectionSection ? (
           <>
             <DropdownMenuLabel className="px-2 py-1.5 text-xs text-muted-foreground">
-              Projection
+              {t("projection")}
             </DropdownMenuLabel>
             {PROJECTION_MODE_OPTIONS.map((option) => {
               const Icon = option.Icon;
@@ -98,7 +105,7 @@ export function DisplayProjectionControl({
                   }}
                 >
                   <Icon className="size-3 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
-                  {projectionMenuLabel(option)}
+                  {projectionMenuLabel(option) ?? t(option.labelKey)}
                   {selected ? (
                     <Check className="ml-auto size-3.5 text-popover-foreground" strokeWidth={2} aria-hidden="true" />
                   ) : (
@@ -113,7 +120,7 @@ export function DisplayProjectionControl({
         {showDisplayModeSection ? (
           <>
             <DropdownMenuLabel className="px-2 py-1.5 text-xs text-muted-foreground">
-              Display
+              {t("display")}
             </DropdownMenuLabel>
             {DISPLAY_MODE_OPTIONS.map((option) => {
               const selected = selectedOption.value === option.value;
@@ -125,7 +132,7 @@ export function DisplayProjectionControl({
                     onDisplayModeChange?.(option.value);
                   }}
                 >
-                  {option.label}
+                  {option.labelKey ? t(option.labelKey) : option.label}
                   {selected ? (
                     <Check className="ml-auto size-3.5 text-popover-foreground" strokeWidth={2} aria-hidden="true" />
                   ) : (

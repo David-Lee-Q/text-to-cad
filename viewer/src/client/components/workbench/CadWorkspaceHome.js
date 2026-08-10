@@ -27,6 +27,7 @@ import {
   fileKey,
   sidebarLabelForEntry
 } from "@/workbench/sidebar";
+import { useI18n } from "@/i18n";
 
 const MAX_HOME_OPTIONS = 6;
 
@@ -166,6 +167,7 @@ export default function CadWorkspaceHome({
   directoryOptions = [],
   onSelectDirectory
 }) {
+  const { t } = useI18n();
   const homeEntries = selectHomeEntries(entries);
   const normalizedDirectoryOptions = normalizeDirectoryOptions(directoryOptions);
   const hasEntries = homeEntries.length > 0;
@@ -173,14 +175,14 @@ export default function CadWorkspaceHome({
   const catalogErrorMessage = String(catalogError || "").trim();
   const catalogLoading = !catalogHydrated || (catalogRefreshing && !hasEntries);
   const heading = directorySelectionActive
-    ? "Select a directory"
-    : "Select a file";
+    ? t("selectADirectory")
+    : t("selectAFile");
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20 flex min-w-0 items-center justify-center px-4 py-6">
       <section
         className="cad-glass-popover pointer-events-auto w-full max-w-2xl overflow-hidden rounded-md border border-sidebar-border text-popover-foreground shadow-xl shadow-black/10"
-        aria-label="CAD Viewer home"
+        aria-label={t("homeAria")}
       >
         <div className="border-b border-sidebar-border px-5 py-4 sm:px-6">
           <h1 className="text-lg font-medium leading-6 text-foreground sm:text-xl">
@@ -224,14 +226,14 @@ export default function CadWorkspaceHome({
                       "max-sm:hidden"
                     )}
                   >
-                    Directory
+                    {t("directory")}
                   </span>
                   <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" aria-hidden="true" />
                 </Button>
               );
             }) : (
               <p className="px-5 py-5 text-sm text-muted-foreground sm:px-6">
-                No active directories found.
+                {t("noActiveDirectories")}
               </p>
             )
           ) : hasEntries ? homeEntries.map((entry) => {
@@ -279,15 +281,15 @@ export default function CadWorkspaceHome({
             );
           }) : catalogErrorMessage ? (
             <p className="break-words px-5 py-5 text-sm text-muted-foreground sm:px-6" role="status">
-              CAD catalog unavailable: {catalogErrorMessage}
+              {t("catalogUnavailable", { message: catalogErrorMessage })}
             </p>
           ) : catalogLoading ? (
             <p className="px-5 py-5 text-sm text-muted-foreground sm:px-6" role="status">
-              Loading CAD catalog...
+              {t("loadingCatalog")}
             </p>
           ) : (
             <p className="px-5 py-5 text-sm text-muted-foreground sm:px-6">
-              No CAD entries found.
+              {t("noEntries")}
             </p>
           )}
         </div>

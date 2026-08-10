@@ -18,6 +18,7 @@ import DrawingToolbar from "./DrawingToolbar";
 import { ToolbarButton } from "./ToolbarButton";
 import { CAD_WORKSPACE_TOOLBAR_DESKTOP_WIDTH_CLASS } from "./ToolbarShell";
 import { DisplayProjectionControl } from "../viewer/DisplayProjectionControl";
+import { useI18n } from "@/i18n";
 
 const FLOATING_TOOL_BAR_SURFACE_CLASS =
   "cad-glass-surface border border-sidebar-border text-sidebar-foreground shadow-sm";
@@ -60,6 +61,7 @@ function DesktopFloatingToolBar({
   handleEnterPreviewMode,
   handleScreenshotCopy
 }) {
+  const { t } = useI18n();
   const [displayMenuOpen, setDisplayMenuOpen] = useState(false);
   const dxfMode = renderFormat === RENDER_FORMAT.DXF;
   const implicitMode = renderFormat === RENDER_FORMAT.IMPLICIT;
@@ -74,10 +76,10 @@ function DesktopFloatingToolBar({
     referenceSelectionUnavailable ||
     referenceSelectionDeferred;
   const posePickerDisabled = viewerLoading || !selectedMeshData || !urdfPosePickerAvailable;
-  const selectLabel = referenceSelectionPending ? "Preparing selection" : "Select";
+  const selectLabel = referenceSelectionPending ? t("preparingSelection") : t("select");
   const showStepAnimationPlay = renderFormat === RENDER_FORMAT.STEP && stepAnimationAvailable;
   const stepAnimationPlayDisabled = viewerLoading || !selectedMeshData || stepAnimationDisabled;
-  const stepAnimationLabel = stepAnimationPlaying ? "Pause" : "Play";
+  const stepAnimationLabel = stepAnimationPlaying ? t("pause") : t("play");
   const displayControlAvailable = renderFormat === RENDER_FORMAT.STEP &&
     typeof onDisplayModeChange === "function" &&
     typeof onProjectionChange === "function";
@@ -102,7 +104,7 @@ function DesktopFloatingToolBar({
               </ToolbarButton>
 
               <ToolbarButton
-                label="Draw"
+                label={t("draw")}
                 active={drawToolActive}
                 onClick={() => handleSelectTabToolMode("draw")}
                 disabled={viewerLoading || !selectedMeshData}
@@ -146,7 +148,7 @@ function DesktopFloatingToolBar({
 
           {!dxfMode && urdfMode ? (
             <ToolbarButton
-              label="Select Pose"
+              label={t("selectPose")}
               active={urdfPosePickerActive}
               onClick={handleToggleUrdfPosePicker}
               disabled={posePickerDisabled}
@@ -158,7 +160,7 @@ function DesktopFloatingToolBar({
 
           {!dxfMode ? (
             <ToolbarButton
-              label="Orbit"
+              label={t("orbit")}
               onClick={handleEnterPreviewMode}
               disabled={viewerLoading || !renderReady}
             >
@@ -167,7 +169,7 @@ function DesktopFloatingToolBar({
           ) : null}
 
           <ToolbarButton
-            label="Copy screenshot"
+            label={t("copyScreenshot")}
             onClick={() => {
               void handleScreenshotCopy();
             }}

@@ -9,6 +9,7 @@ import {
 } from "../ui/alert-dialog";
 import { Badge } from "../ui/badge";
 import ViewerAlertCommand from "./ViewerAlertCommand";
+import { useI18n } from "@/i18n";
 
 export default function ViewerAlertDialog({
   viewerAlertOpen,
@@ -16,6 +17,7 @@ export default function ViewerAlertDialog({
   previewMode,
   setViewerAlertOpen
 }) {
+  const { t } = useI18n();
   if (!viewerAlert || previewMode) {
     return null;
   }
@@ -45,7 +47,7 @@ export default function ViewerAlertDialog({
         </AlertDialogHeader>
         <ViewerAlertCommand command={viewerAlert.command} />
         <AlertDialogFooter>
-          <AlertDialogCancel aria-label="Close alert dialog">Close</AlertDialogCancel>
+          <AlertDialogCancel aria-label={t("closeAlertDialog")}>{t("close")}</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

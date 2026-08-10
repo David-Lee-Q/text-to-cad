@@ -23,6 +23,7 @@ import {
   normalizeImplicitGraphicsSettings
 } from "@/workbench/implicitGraphicsSettings";
 import ViewPlaneControl from "./viewer/ViewPlaneControl";
+import { useI18n } from "@/i18n";
 import {
   PREVIEW_AUTO_ROTATE_SPEED,
   updateOrbitControls
@@ -598,6 +599,7 @@ const ImplicitCadViewer = forwardRef(function ImplicitCadViewer({
   onPerspectiveChange,
   onViewerAlertChange
 }, ref) {
+  const { t } = useI18n();
   const mountRef = useRef(null);
   const runtimeRef = useRef(null);
   const frameInsetsRef = useRef(viewportFrameInsets);
@@ -1289,8 +1291,8 @@ const ImplicitCadViewer = forwardRef(function ImplicitCadViewer({
       {!previewMode && !isLoading && model && autoZoomDetached ? (
         <button
           type="button"
-          aria-label="Reset view"
-          title="Reset view"
+          aria-label={t("resetView")}
+          title={t("resetView")}
           className={`${RESET_VIEW_CONTROL_BUTTON_CLASSES} absolute z-20`}
           style={{
             right: `calc(${finiteNumber(viewPlaneOffsetRight, 16)}px + 2rem)`,

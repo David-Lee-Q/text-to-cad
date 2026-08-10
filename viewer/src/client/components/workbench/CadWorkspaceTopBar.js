@@ -79,28 +79,31 @@ import {
   directoryTitle,
   ellipsisBreadcrumbMenuDirectory
 } from "@/workbench/breadcrumbs";
+import LanguageToggle from "./LanguageToggle";
+import { useI18n } from "@/i18n";
 import viewerPackage from "../../../../package.json";
 
-function fileSheetLabel(fileSheetKind) {
+function fileSheetLabel(fileSheetKind, t) {
+  const translate = typeof t === "function" ? t : (key) => key;
   if (fileSheetKind === "dxf") {
-    return "DXF sheet";
+    return translate("sheetDxf");
   }
   if (fileSheetKind === "urdf") {
-    return "URDF sheet";
+    return translate("sheetUrdf");
   }
   if (fileSheetKind === "srdf") {
-    return "SRDF sheet";
+    return translate("sheetSrdf");
   }
   if (fileSheetKind === "sdf") {
-    return "SDF sheet";
+    return translate("sheetSdf");
   }
   if (fileSheetKind === "step") {
-    return "STEP sheet";
+    return translate("sheetStep");
   }
   if (fileSheetKind === "implicit") {
-    return "Implicit CAD sheet";
+    return translate("sheetImplicit");
   }
-  return "file sheet";
+  return translate("sheetDefault");
 }
 
 function sourceFormatForEntry(entry, entrySourceFormat) {
@@ -550,8 +553,7 @@ function BreadcrumbEllipsisDropdown({
   entrySourceFormat,
   entryHasMesh,
   entryHasDxf,
-  entryHasGcode,
-  entryHasUrdf,
+  entryHasGcode,  entryHasUrdf,
   activeGenerationFiles = [],
   activeStepArtifactGenerationFile = "",
   stepArtifactGenerationAvailable = true,
@@ -565,6 +567,7 @@ function BreadcrumbEllipsisDropdown({
   onCopyFileAssetReference,
   title
 }) {
+  const { t } = useI18n();
   const hiddenNodes = Array.isArray(nodes) ? nodes.filter(Boolean) : [];
   const menuTitle = hiddenNodes.map((node) => node.label).join(" / ") || title;
 
@@ -574,7 +577,7 @@ function BreadcrumbEllipsisDropdown({
         <button
           type="button"
           className="inline-flex h-6 min-w-7 items-center justify-center rounded-md px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label="Show collapsed path folders"
+          aria-label={t("showCollapsedPathFolders")}
           title={menuTitle}
         >
           <span aria-hidden="true">...</span>
@@ -895,6 +898,7 @@ function VersionTooltipRow({ label, version, action = null }) {
 
 function VersionReleaseLink({ version, releaseUrl, releaseCheck = emptyLatestReleaseCheck }) {
   const normalizedVersion = String(version || "").trim();
+  const { t } = useI18n();
   const [installCopyStatus, setInstallCopyStatus] = useState("");
   const copyGestureHandledRef = useRef(false);
 
@@ -917,8 +921,8 @@ function VersionReleaseLink({ version, releaseUrl, releaseCheck = emptyLatestRel
   ).trim() || DEFAULT_VIEWER_SKILLS_INSTALL_COMMAND;
   const upToDate = Boolean(latestVersion) && !latestReleaseNewer;
   const label = updateAvailable
-    ? "Update CAD Viewer"
-    : (targetReleaseUrl ? `Open release ${normalizedVersion}` : `Version ${normalizedVersion}`);
+    ? t("updateCadViewer")
+    : (targetReleaseUrl ? t("openRelease", { version: normalizedVersion }) : t("versionLabel", { version: normalizedVersion }));
 
   const handleCopyInstallCommand = async (event) => {
     event.preventDefault();
@@ -958,7 +962,7 @@ function VersionReleaseLink({ version, releaseUrl, releaseCheck = emptyLatestRel
         <a href={targetReleaseUrl} target="_blank" rel="noreferrer">
           <span className="inline-flex items-center gap-1">
             {updateAvailable ? (
-              <span>Update</span>
+              <span>{t("update")}</span>
             ) : (
               <span>{normalizedVersion}</span>
             )}
@@ -967,7 +971,7 @@ function VersionReleaseLink({ version, releaseUrl, releaseCheck = emptyLatestRel
       ) : (
         <span className="inline-flex items-center gap-1">
           {updateAvailable ? (
-            <span>Update</span>
+            <span>{t("update")}</span>
           ) : (
             <span>{normalizedVersion}</span>
           )}
@@ -991,11 +995,11 @@ function VersionReleaseLink({ version, releaseUrl, releaseCheck = emptyLatestRel
           {latestVersionVisible ? (
             <div className="grid w-full min-w-0 grid-cols-2 gap-3">
               <VersionTooltipRow
-                label="Current Version"
+                label={t("currentVersion")}
                 version={normalizedVersion}
               />
               <VersionTooltipRow
-                label="Latest Version"
+                label={t("latestVersion")}
                 version={latestVersion}
                 action={latestReleaseUrl ? (
                   <Button
@@ -1003,10 +1007,10 @@ function VersionReleaseLink({ version, releaseUrl, releaseCheck = emptyLatestRel
                     variant="default"
                     size="xs"
                     className="h-4 !min-h-0 rounded-sm !px-1.5 !py-0 text-[10px] font-medium leading-none"
-                    aria-label={`Update CAD Viewer to ${latestVersion}`}
+                    aria-label={t("updateToVersion", { version: latestVersion })}
                   >
                     <a href={latestReleaseUrl} target="_blank" rel="noreferrer">
-                      Update
+                      {t("update")}
                     </a>
                   </Button>
                 ) : null}
@@ -1014,12 +1018,12 @@ function VersionReleaseLink({ version, releaseUrl, releaseCheck = emptyLatestRel
             </div>
           ) : (
             <VersionTooltipRow
-              label="Current Version"
+              label={t("currentVersion")}
               version={normalizedVersion}
             />
           )}
           <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="px-0.5 text-[11px] font-medium leading-none text-muted-foreground">Update Command</div>
+            <div className="px-0.5 text-[11px] font-medium leading-none text-muted-foreground">{t("updateCommand")}</div>
             <div className="flex h-8 min-w-0 items-center gap-2 rounded-sm border border-border/60 bg-muted/35 p-1 pl-2">
               <code className="min-w-0 flex-1 whitespace-nowrap font-mono text-[11px] leading-5 text-foreground">
                 {installCommand}
@@ -1029,7 +1033,7 @@ function VersionReleaseLink({ version, releaseUrl, releaseCheck = emptyLatestRel
                 variant="ghost"
                 size="icon"
                 className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm border border-border text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={installCopyStatus === "copied" ? "Install command copied" : "Copy install command"}
+                aria-label={installCopyStatus === "copied" ? t("installCommandCopied") : t("copyInstallCommand")}
                 onPointerDown={handleCopyInstallCommand}
                 onClick={handleCopyInstallCommand}
               >
@@ -1042,12 +1046,12 @@ function VersionReleaseLink({ version, releaseUrl, releaseCheck = emptyLatestRel
             </div>
           </div>
           {installCopyStatus === "failed" ? (
-            <div className="text-[11px] text-muted-foreground">Copy failed</div>
+            <div className="text-[11px] text-muted-foreground">{t("copyFailed")}</div>
           ) : null}
           {upToDate ? (
             <div className="flex items-center gap-1.5 px-0.5 text-[11px] font-medium text-muted-foreground">
               <CircleCheck className="size-3 text-primary" aria-hidden="true" />
-              <span>You are up to date</span>
+              <span>{t("youAreUpToDate")}</span>
             </div>
           ) : null}
         </div>
@@ -1101,6 +1105,7 @@ export default function CadWorkspaceTopBar({
   navigationAvailable = true
 }) {
   const viewerVersion = String(viewerPackage.version || "").trim();
+  const { t } = useI18n();
   const discordUrl = normalizeViewerDiscordUrl(import.meta.env?.VIEWER_DISCORD_URL);
   const githubUrl = normalizeViewerGithubUrl(import.meta.env?.VIEWER_GITHUB_URL);
   const releaseUrl = viewerGithubReleaseUrl(viewerVersion, githubUrl);
@@ -1126,7 +1131,7 @@ export default function CadWorkspaceTopBar({
 
   const selectedFileLabel = selectedEntry && typeof sidebarLabelForEntry === "function"
     ? sidebarLabelForEntry(selectedEntry)
-    : "Select a file";
+    : t("selectAFile");
   const selectedFileTitle = selectedEntry
     ? String(selectedEntry.file || selectedEntry.id || selectedFileLabel)
     : selectedFileLabel;
@@ -1142,8 +1147,8 @@ export default function CadWorkspaceTopBar({
   const activeIconButtonClasses = "bg-accent text-accent-foreground";
   const showFileSheetToggle = !!fileSheetKind && typeof onToggleFileSheet === "function";
   const fileSheetToggleLabel = fileSheetOpen
-    ? `Collapse ${fileSheetLabel(fileSheetKind)}`
-    : `Expand ${fileSheetLabel(fileSheetKind)}`;
+    ? t("collapseSheet", { name: fileSheetLabel(fileSheetKind, t) })
+    : t("expandSheet", { name: fileSheetLabel(fileSheetKind, t) });
   const showThemeColorModeToggle = themeSettingsSupportsSystemColorMode(themeSettings);
   const activeColorSchemeMode = resolvedColorSchemeMode === DARK_COLOR_SCHEME_ID
     ? DARK_COLOR_SCHEME_ID
@@ -1151,7 +1156,10 @@ export default function CadWorkspaceTopBar({
   const nextColorSchemeMode = nextColorMode(activeColorSchemeMode);
   const activeColorSchemeModeLabel = activeColorSchemeMode === DARK_COLOR_SCHEME_ID ? "dark" : "light";
   const nextColorSchemeModeLabel = nextColorSchemeMode === DARK_COLOR_SCHEME_ID ? "dark" : "light";
-  const colorModeToggleLabel = `Browser color mode: ${activeColorSchemeModeLabel}. Switch to ${nextColorSchemeModeLabel} mode.`;
+  const colorModeToggleLabel = t("colorModeToggle", {
+    current: activeColorSchemeModeLabel,
+    next: nextColorSchemeModeLabel
+  });
   const ColorModeIcon = activeColorSchemeMode === DARK_COLOR_SCHEME_ID ? Moon : Sun;
 
   const handleThemeColorModeToggle = () => {
@@ -1167,8 +1175,8 @@ export default function CadWorkspaceTopBar({
     >
       {navigationAvailable ? (
         <SidebarTrigger
-          title="Toggle CAD Viewer"
-          aria-label="Toggle CAD Viewer"
+          title={t("toggleCadViewer")}
+          aria-label={t("toggleCadViewer")}
           className="shrink-0"
         />
       ) : null}
@@ -1284,6 +1292,7 @@ export default function CadWorkspaceTopBar({
 
       <TooltipProvider delayDuration={250}>
         <div className="flex shrink-0 items-center gap-1.5">
+          <LanguageToggle />
           <VersionReleaseLink
             version={viewerVersion}
             releaseUrl={releaseUrl}
@@ -1293,8 +1302,8 @@ export default function CadWorkspaceTopBar({
             asChild
             variant="ghost"
             size="icon-sm"
-            aria-label="Join the CAD Skills Discord"
-            title="Join the CAD Skills Discord"
+            aria-label={t("joinDiscord")}
+            title={t("joinDiscord")}
             className={topBarIconButtonClasses}
           >
             <a href={discordUrl} target="_blank" rel="noreferrer">
@@ -1306,8 +1315,8 @@ export default function CadWorkspaceTopBar({
               asChild
               variant="ghost"
               size="icon-sm"
-              aria-label="Open GitHub repository"
-              title="Open GitHub repository"
+              aria-label={t("openGithub")}
+              title={t("openGithub")}
               className={topBarIconButtonClasses}
             >
               <a href={githubUrl} target="_blank" rel="noreferrer">

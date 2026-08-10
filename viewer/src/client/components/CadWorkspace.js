@@ -20,6 +20,7 @@ import ViewerAlertDialog from "./workbench/ViewerAlertDialog";
 import ViewerLoadingOverlay from "./workbench/ViewerLoadingOverlay";
 import FloatingToolBar from "./workbench/FloatingToolBar";
 import CadWorkspaceTopBar from "./workbench/CadWorkspaceTopBar";
+import { useI18n } from "@/i18n";
 import CadWorkspaceHome from "./workbench/CadWorkspaceHome";
 import { useCadAssets } from "./workbench/hooks/useCadAssets";
 import {
@@ -1137,6 +1138,7 @@ export default function CadWorkspace({
   catalogError = "",
   activeDir = ""
 }) {
+  const { t } = useI18n();
   const manifestEntries = Array.isArray(manifestEntriesProp) ? manifestEntriesProp : [];
   const catalogEntries = manifestEntries;
   const explicitDirParam = readCadDirParam();
@@ -9040,7 +9042,7 @@ export default function CadWorkspace({
               <ImplicitFileSheet
                 key={`implicit:${selectedKey}`}
                 open={fileSheetOpen}
-                title="Implicit CAD"
+                title={t("implicitCad")}
                 isDesktop={isDesktop}
                 width={activeSheetWidth || tabToolsWidth}
                 selectedEntry={selectedEntry}

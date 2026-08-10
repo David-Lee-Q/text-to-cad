@@ -4,6 +4,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { TooltipProvider } from "../ui/tooltip";
 import ToolbarShell from "./ToolbarShell";
 import { ToolbarButton } from "./ToolbarButton";
+import { useI18n } from "@/i18n";
 
 export default function DrawingToolbar({
   className,
@@ -24,6 +25,7 @@ export default function DrawingToolbar({
   const canUndo = canUndoDrawing;
   const canRedo = canRedoDrawing;
   const actionCount = drawingStrokes.length;
+  const { t } = useI18n();
   const scrollLayout = layout === "scroll";
   const toolbarButtons = (
     <div
@@ -48,7 +50,7 @@ export default function DrawingToolbar({
       })}
 
       <ToolbarButton
-        label="Undo"
+        label={t("undo")}
         onClick={historyUndo}
         disabled={!canUndo}
       >
@@ -56,7 +58,7 @@ export default function DrawingToolbar({
       </ToolbarButton>
 
       <ToolbarButton
-        label="Redo"
+        label={t("redo")}
         onClick={historyRedo}
         disabled={!canRedo}
       >
@@ -64,7 +66,7 @@ export default function DrawingToolbar({
       </ToolbarButton>
 
       <ToolbarButton
-        label="Clear all"
+        label={t("clearAll")}
         onClick={clearAction}
         disabled={!actionCount}
       >

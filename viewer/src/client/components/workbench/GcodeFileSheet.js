@@ -19,6 +19,7 @@ import {
   GCODE_PREVIEW_DETAIL_MIN
 } from "cadjs/lib/gcode/buildPreviewMesh";
 import FileStatusSection from "./FileStatusSection";
+import { useI18n } from "@/i18n";
 const fieldLabelClasses = FILE_SHEET_FIELD_LABEL_CLASSES;
 const compactNumberBadgeClasses = "h-4 rounded-sm px-1.5 py-0 text-[10px] font-medium leading-none";
 
@@ -65,23 +66,24 @@ function formatFeatureCategory(value) {
   return normalized ? `${normalized[0].toUpperCase()}${normalized.slice(1)}` : "Other";
 }
 
-function previewDetailLabel(value) {
+function previewDetailLabel(value, t) {
+  const translate = typeof t === "function" ? t : (key) => key;
   switch (Math.round(Number(value) || DEFAULT_GCODE_PREVIEW_DETAIL_LEVEL)) {
     case 1:
-      return "Light";
+      return translate("detailLight");
     case 2:
-      return "Lean";
+      return translate("detailLean");
     case 4:
-      return "Dense";
+      return translate("detailDense");
     case 5:
-      return "High";
+      return translate("detailHigh");
     case 6:
-      return "Very high";
+      return translate("detailVeryHigh");
     case 7:
-      return "Max adaptive";
+      return translate("detailMaxAdaptive");
     case 3:
     default:
-      return "Standard";
+      return translate("detailStandard");
   }
 }
 
@@ -164,6 +166,7 @@ export default function GcodeFileSheet({
   openSectionIds = [],
   onOpenSectionIdsChange
 }) {
+  const { t } = useI18n();
   const layers = Array.isArray(gcodeData?.layers) ? gcodeData.layers : [];
   const stats = gcodeData?.stats || {};
   const features = Array.isArray(gcodeData?.features) ? gcodeData.features : [];
@@ -199,7 +202,7 @@ export default function GcodeFileSheet({
   return (
     <FileSheet
       open={open}
-      title="G-code"
+      title={t("gcode")}
       isDesktop={isDesktop}
       width={width}
       onOpenChange={onOpenChange}
@@ -213,13 +216,13 @@ export default function GcodeFileSheet({
       >
         <FileStatusSection items={statusItems} />
 
-        <FileSheetSection value="toolpath" title="Toolpath">
+        <FileSheetSection value="toolpath" title={t("toolpath")}>
             <div>
               {!hasGcodeData ? (
-                <p className="px-3 py-2 text-xs text-muted-foreground">Loading G-code...</p>
+                <p className="px-3 py-2 text-xs text-muted-foreground">{t("loadingGcode")}</p>
               ) : null}
 
-              <FileSheetSubsection title="Summary" contentClassName="px-3">
+              <FileSheetSubsection title={t("summary")} contentClassName="px-3">
                 <div className="flex flex-wrap gap-1.5">
                   <Badge variant="secondary" className="font-normal">
                     {formatCount(layerCount)} layer{layerCount === 1 ? "" : "s"}
@@ -238,9 +241,9 @@ export default function GcodeFileSheet({
                 </div>
               </FileSheetSubsection>
 
-              <FileSheetSubsection title="Layers">
+              <FileSheetSubsection title={t("layers")}>
                 <FileSheetSliderField
-                  label="Visible layers"
+                  label={t("visibleLayers")}
                   value={visibleLayers}
                   onValueCommit={(nextValue) => {
                     onMaxLayerChange?.(parseVisibleLayerInput(nextValue, safeMaxLayer + 1, layerCount));
@@ -261,17 +264,17 @@ export default function GcodeFileSheet({
                     onMaxLayerChange?.(Number(nextValue?.[0] ?? 0));
                   }}
                   className={FILE_SHEET_PRECISION_SLIDER_CLASSES}
-                  aria-label="Visible G-code layers"
+                  aria-label={t("visibleGcodeLayers")}
                 />
                 </FileSheetSliderField>
               </FileSheetSubsection>
 
               <FileSheetSubsection
-                title="Preview"
+                title={t("preview")}
               >
                 <FileSheetSliderField
-                  label="Adaptive detail"
-                  value={`${previewDetailLabel(safePreviewDetailLevel)} (${safePreviewDetailLevel}/${GCODE_PREVIEW_DETAIL_MAX})`}
+                  label={t("adaptiveDetail")}
+                  value={`${previewDetailLabel(safePreviewDetailLevel, t)} (${safePreviewDetailLevel}/${GCODE_PREVIEW_DETAIL_MAX})`}
                   onValueCommit={(nextValue) => {
                     onPreviewDetailLevelChange?.(parseFileSheetNumberInput(nextValue, {
                       fallback: safePreviewDetailLevel,
@@ -296,14 +299,14 @@ export default function GcodeFileSheet({
                     onPreviewDetailLevelChange?.(Number(nextValue?.[0] ?? DEFAULT_GCODE_PREVIEW_DETAIL_LEVEL));
                   }}
                   className={FILE_SHEET_PRECISION_SLIDER_CLASSES}
-                  aria-label="G-code preview detail"
+                  aria-label={t("gcodePreviewDetail")}
                 />
                 </FileSheetSliderField>
               </FileSheetSubsection>
 
-              <FileSheetSubsection title="Rendering">
+              <FileSheetSubsection title={t("rendering")}>
                 <FileSheetToggleRow
-                  label="Travel moves"
+                  label={t("travelMoves")}
                   description={`${formatCount(stats.travelMoves)} move${formatCount(stats.travelMoves) === "1" ? "" : "s"}`}
                   checked={showTravel}
                   onCheckedChange={(checked) => onShowTravelChange?.(checked)}
@@ -311,7 +314,7 @@ export default function GcodeFileSheet({
                 />
 
                 <FileSheetToggleRow
-                  label="Full detail"
+                  label={t("fullDetail")}
                   description={fullDetail
                     ? "Exact: render every visible path."
                     : renderedPathText
@@ -329,12 +332,12 @@ export default function GcodeFileSheet({
           value="features"
           title={(
             <span className="flex min-w-0 items-center gap-2">
-              <span>Features</span>
+              <span>{t("features")}</span>
               {features.length ? (
                 <Badge variant="outline" className={compactNumberBadgeClasses}>{features.length}</Badge>
               ) : null}
               {hasSupports ? (
-                <Badge variant="outline" className="font-normal">Supports</Badge>
+                <Badge variant="outline" className="font-normal">{t("supports")}</Badge>
               ) : null}
             </span>
           )}
@@ -393,18 +396,18 @@ export default function GcodeFileSheet({
             </div>
         </FileSheetSection>
 
-        <FileSheetSection value="stats" title="Stats">
+        <FileSheetSection value="stats" title={t("stats")}>
             <div className="grid grid-cols-2 gap-2 px-3 py-3">
-              <GcodeValueField label="Extrusion" value={formatDistance(stats.extrusionMm, 1)} />
-              <GcodeValueField label="Path length" value={formatDistance(stats.pathMm, 1)} />
-              <GcodeValueField label="Retracts" value={formatCount(stats.retractMoves)} />
-              <GcodeValueField label="Temperature" value={formatCommandCount(stats.temperatureCommands)} />
-              <GcodeValueField label="Move commands" value={formatCommandCount(stats.movementCommands)} />
-              <GcodeValueField label="Prime moves" value={formatCount(stats.primeMoves)} />
+              <GcodeValueField label={t("extrusion")} value={formatDistance(stats.extrusionMm, 1)} />
+              <GcodeValueField label={t("pathLength")} value={formatDistance(stats.pathMm, 1)} />
+              <GcodeValueField label={t("retracts")} value={formatCount(stats.retractMoves)} />
+              <GcodeValueField label={t("temperature")} value={formatCommandCount(stats.temperatureCommands)} />
+              <GcodeValueField label={t("moveCommands")} value={formatCommandCount(stats.movementCommands)} />
+              <GcodeValueField label={t("primeMoves")} value={formatCount(stats.primeMoves)} />
             </div>
         </FileSheetSection>
 
-        <FileSheetSection value="bounds" title="Bounds">
+        <FileSheetSection value="bounds" title={t("bounds")}>
             <div className="grid grid-cols-1 gap-2 px-3 py-3">
               <GcodeValueField label="X" value={boundsAxisText(gcodeData?.bounds, 0, 1)} mono />
               <GcodeValueField label="Y" value={boundsAxisText(gcodeData?.bounds, 1, 1)} mono />

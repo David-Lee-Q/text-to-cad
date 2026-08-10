@@ -6,6 +6,7 @@ import { parseCadRefToken } from "cadjs/lib/cadRefs";
 import { STEP_TREE_TOPOLOGY_NODE_PREFIX } from "cadjs/lib/step/stepTree";
 import { copyImageBlobToClipboard } from "@/ui/clipboard";
 import { triggerBlobDownload } from "@/ui/download";
+import { useI18n } from "@/i18n";
 import {
   annotatePerspectiveSnapshot,
   CAMERA_PROJECTION,
@@ -681,6 +682,7 @@ function ZoomControl({
   onZoomPercentChange,
   onZoomReset
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState(formatZoomPercent(zoomPercent));
   const selectOnFocusRef = useRef(false);
@@ -709,15 +711,15 @@ function ZoomControl({
     <div
       className="flex h-6 items-center gap-0.5"
       style={{ width: ZOOM_CONTROL_CONTENT_WIDTH }}
-      aria-label="Zoom controls"
+      aria-label={t("zoomControls")}
       onPointerDown={(event) => {
         event.stopPropagation();
       }}
     >
       <button
         type="button"
-        aria-label="Zoom out"
-        title="Zoom out"
+        aria-label={t("zoomOut")}
+        title={t("zoomOut")}
         className={DISPLAY_TOOLBAR_BUTTON_CLASSES}
         onClick={(event) => {
           event.stopPropagation();
@@ -729,7 +731,7 @@ function ZoomControl({
       <input
         type="text"
         inputMode="numeric"
-        aria-label="Zoom level percent"
+        aria-label={t("zoomLevelPercent")}
         className="h-6 w-8 min-w-0 rounded-sm border border-transparent bg-transparent px-0 text-center text-xs font-medium tabular-nums text-sidebar-foreground outline-none transition focus-visible:border-ring focus-visible:bg-sidebar-accent/40 focus-visible:ring-2 focus-visible:ring-ring/35"
         value={inputValue}
         onFocus={(event) => {
@@ -773,8 +775,8 @@ function ZoomControl({
       />
       <button
         type="button"
-        aria-label="Zoom in"
-        title="Zoom in"
+        aria-label={t("zoomIn")}
+        title={t("zoomIn")}
         className={DISPLAY_TOOLBAR_BUTTON_CLASSES}
         onClick={(event) => {
           event.stopPropagation();
@@ -785,8 +787,8 @@ function ZoomControl({
       </button>
       <button
         type="button"
-        aria-label="Reset zoom"
-        title="Reset zoom"
+        aria-label={t("resetZoom")}
+        title={t("resetZoom")}
         className={DISPLAY_TOOLBAR_BUTTON_CLASSES}
         onClick={(event) => {
           event.stopPropagation();
@@ -814,6 +816,7 @@ function ZoomToolbar({
   viewPlaneOffsetRight = 16,
   viewPlaneOffsetBottom = 16
 }) {
+  const { t } = useI18n();
   return (
     <div
       className={DISPLAY_TOOLBAR_CLASSES}
@@ -821,7 +824,7 @@ function ZoomToolbar({
         right: cssLength(viewPlaneOffsetRight, "16px"),
         bottom: `calc(${cssLength(viewPlaneOffsetBottom, "16px")} + ${VIEW_PLANE_CONTROL_SIZE} + ${VIEW_PLANE_CONTROL_GAP})`
       }}
-      aria-label="Zoom controls"
+      aria-label={t("zoomControls")}
       onPointerDown={(event) => {
         event.stopPropagation();
       }}

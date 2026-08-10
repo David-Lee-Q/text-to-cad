@@ -42,6 +42,7 @@ import FileSheet, {
   parseFileSheetNumberInput
 } from "./FileSheet";
 import AssemblyContextMenuItems from "./AssemblyContextMenuItems";
+import { useI18n } from "@/i18n";
 import FileMetadataSection from "./FileMetadataSection";
 import FileStatusSection from "./FileStatusSection";
 
@@ -472,6 +473,7 @@ function StepModuleAnimationTimeControl({
   enabled,
   onScrub
 }) {
+  const { t } = useI18n();
   const liveElapsedSec = useStepAnimationElapsed();
   const rawElapsedSec = animationState?.playing
     ? liveElapsedSec
@@ -480,7 +482,7 @@ function StepModuleAnimationTimeControl({
 
   return (
     <FileSheetSliderField
-      label="Time"
+      label={t("time")}
       value={formatSeconds(elapsedSec)}
       onValueCommit={(nextValue) => {
         onScrub?.(parseFileSheetNumberInput(nextValue, {
@@ -491,7 +493,7 @@ function StepModuleAnimationTimeControl({
       }}
       valueInputProps={{
         disabled: !enabled,
-        ariaLabel: "STEP animation time value"
+        ariaLabel: `${t("step")} ${t("animation")} ${t("time")} value`
       }}
     >
       <Slider
@@ -502,7 +504,7 @@ function StepModuleAnimationTimeControl({
         step={0.01}
         onValueChange={(nextValue) => onScrub?.(nextValue?.[0] ?? 0)}
         disabled={!enabled}
-        aria-label="STEP animation time"
+        aria-label={`${t("step")} ${t("animation")} ${t("time")}`}
       />
     </FileSheetSliderField>
   );
@@ -565,6 +567,7 @@ export default function StepFileSheet({
   openSectionIds = [],
   onOpenSectionIdsChange
 }) {
+  const { t } = useI18n();
   const rowRefs = useRef(new Map());
   const lastActiveTreeNodeScrollKeyRef = useRef("");
   const selectedIds = Array.isArray(selectedPartIds) ? selectedPartIds : [];
@@ -866,7 +869,7 @@ export default function StepFileSheet({
   return (
     <FileSheet
       open={open}
-      title="STEP"
+      title={t("step")}
       isDesktop={isDesktop}
       width={width}
       onOpenChange={onOpenChange}
@@ -881,7 +884,7 @@ export default function StepFileSheet({
 
         <FileSheetSection
           value={treeSectionId}
-          title="Tree"
+          title={t("tree")}
           triggerProps={{ title: treeSelectionTitle || undefined }}
         >
             <div className="max-w-full overflow-hidden px-1.5 pb-2">
@@ -1440,11 +1443,11 @@ export default function StepFileSheet({
         </FileSheetSection>
 
         {stepModuleDefinition || stepModuleStatus === "loading" || stepModuleError ? (
-          <FileSheetSection value="parameters" title="Parameters">
+          <FileSheetSection value="parameters" title={t("parameters")}>
               <FileSheetSectionBody>
                 {stepModuleDefinition ? (
                   <FileSheetToggleRow
-                    label="Enable"
+                    label={t("enable")}
                     checked={stepModuleEnabled}
                     onCheckedChange={(checked) => stepModule?.onEnabledChange?.(checked)}
                     ariaLabel="Enable STEP module"
@@ -1452,7 +1455,7 @@ export default function StepFileSheet({
                 ) : null}
 
                 {stepModuleStatus === "loading" ? (
-                  <p className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">Loading STEP module...</p>
+                  <p className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">{t("loadingStepModule")}</p>
                 ) : null}
                 {stepModuleError ? (
                   <p className="whitespace-pre-line px-3 py-2 text-xs text-destructive">{stepModuleError}</p>
@@ -1461,13 +1464,13 @@ export default function StepFileSheet({
                 {stepModuleDefinition && stepModuleAnimations.length ? (
                   <>
                     {stepModuleAnimations.length > 1 ? (
-                      <FileSheetControlRow label="Animation">
+                      <FileSheetControlRow label={t("animation")}>
                         <Select
                           value={String(stepModuleAnimationState.activeId || stepModuleAnimations[0]?.id || "")}
                           onValueChange={(nextValue) => stepModule?.onAnimationSelect?.(nextValue)}
                           disabled={!stepModuleEnabled}
                         >
-                          <SelectTrigger size="sm" className="h-7 !text-[11px]" aria-label="STEP animation">
+                          <SelectTrigger size="sm" className="h-7 !text-[11px]" aria-label={`${t("step")} ${t("animation")}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1504,11 +1507,11 @@ export default function StepFileSheet({
                           className={cn(compactButtonClasses, "justify-center")}
                           onClick={() => stepModule?.onAnimationReset?.()}
                           disabled={!stepModuleEnabled}
-                          aria-label="Restart STEP animation"
-                          title="Restart"
+                          aria-label={t("restartStepAnimation")}
+                          title={t("restart")}
                         >
                           <RotateCcw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-                          <span>Reset</span>
+                          <span>{t("reset")}</span>
                         </Button>
                       </div>
                     </FileSheetControlRow>
@@ -1519,7 +1522,7 @@ export default function StepFileSheet({
                       onScrub={stepModule?.onAnimationScrub}
                     />
                     <FileSheetSliderField
-                      label="Speed"
+                      label={t("speed")}
                       value={`${formatControlNumber(stepModuleAnimationState.speed || 1)}x`}
                       onValueCommit={(nextValue) => {
                         stepModule?.onAnimationSpeedChange?.(
@@ -1528,7 +1531,7 @@ export default function StepFileSheet({
                       }}
                       valueInputProps={{
                         disabled: !stepModuleEnabled,
-                        ariaLabel: "STEP animation speed value"
+                        ariaLabel: `${t("step")} ${t("animation")} ${t("speed")} value`
                       }}
                     >
                       <Slider
@@ -1539,14 +1542,14 @@ export default function StepFileSheet({
                         step={0.1}
                         onValueChange={(nextValue) => stepModule?.onAnimationSpeedChange?.(nextValue?.[0] ?? 1)}
                         disabled={!stepModuleEnabled}
-                        aria-label="STEP animation speed"
+                        aria-label={`${t("step")} ${t("animation")} ${t("speed")}`}
                       />
                     </FileSheetSliderField>
                   </>
                 ) : null}
 
                 {stepModuleDefinition && !stepModuleParameters.length ? (
-                  <p className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">No module parameters.</p>
+                  <p className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">{t("noModuleParameters")}</p>
                 ) : null}
                 {stepModuleParameters.map((parameter) => {
                   const value = stepModuleValues?.[parameter.id] ?? parameter.defaultValue;
@@ -1661,10 +1664,10 @@ export default function StepFileSheet({
                         onClick={() => {
                           void stepModule?.onCopyParams?.();
                         }}
-                        title="Copy STEP parameter JSON"
+                        title={t("copyStepParameterJson")}
                       >
                         <Copy className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-                        <span>Copy parameters</span>
+                        <span>{t("copyParameters")}</span>
                       </Button>
                       <Button
                         type="button"
@@ -1674,10 +1677,10 @@ export default function StepFileSheet({
                         onClick={() => {
                           void stepModule?.onPasteParams?.();
                         }}
-                        title="Paste STEP parameter JSON"
+                        title={t("pasteStepParameterJson")}
                       >
                         <ClipboardPaste className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-                        <span>Paste parameters</span>
+                        <span>{t("pasteParameters")}</span>
                       </Button>
                     </div>
                   </FileSheetControlRow>

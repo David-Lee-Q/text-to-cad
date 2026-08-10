@@ -23,6 +23,7 @@ import FileSheet, {
 } from "./FileSheet";
 import FileMetadataSection from "./FileMetadataSection";
 import FileStatusSection from "./FileStatusSection";
+import { useI18n } from "@/i18n";
 
 const compactInputClasses = FILE_SHEET_COMPACT_NUMERIC_INPUT_CLASSES;
 const compactIconButtonClasses = FILE_SHEET_COMPACT_ICON_BUTTON_CLASSES;
@@ -45,6 +46,7 @@ function DxfBendRow({
   setting,
   onChange
 }) {
+  const { t } = useI18n();
   const [draftAngle, setDraftAngle] = useState(() => formatAngleInput(setting?.angleDeg));
 
   useEffect(() => {
@@ -63,7 +65,7 @@ function DxfBendRow({
     <FileSheetControlRow label={`B${index + 1}`}>
       <div className="grid grid-cols-[minmax(0,1fr)_5.75rem] gap-2">
         <div className="min-w-0">
-          <span className="sr-only">Direction</span>
+          <span className="sr-only">{t("direction")}</span>
           <ToggleGroup
             type="single"
             variant="outline"
@@ -76,7 +78,7 @@ function DxfBendRow({
               onChange(index, { direction: nextDirection });
             }}
             className="grid h-7 w-full min-w-0 grid-cols-2"
-            aria-label={`Bend ${index + 1} direction`}
+            aria-label={`${t("bends")} ${index + 1} ${t("direction")}`}
           >
             <ToggleGroupItem
               value={DXF_BEND_DIRECTION.UP}
@@ -93,7 +95,7 @@ function DxfBendRow({
           </ToggleGroup>
         </div>
         <label className="block">
-          <span className="sr-only">Angle</span>
+          <span className="sr-only">{t("angle")}</span>
           <div className="relative">
             <Input
               type="number"
@@ -120,9 +122,9 @@ function DxfBendRow({
                 }
               }}
               className={`${compactInputClasses} w-full pr-9 text-right`}
-              aria-label={`Bend ${index + 1} angle in degrees`}
+              aria-label={`${t("bends")} ${index + 1} ${t("angle")} (${t("deg")})`}
             />
-            <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">deg</span>
+            <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">{t("deg")}</span>
           </div>
         </label>
       </div>
@@ -154,6 +156,7 @@ export default function DxfFileSheet({
   openSectionIds = [],
   onOpenSectionIdsChange
 }) {
+  const { t } = useI18n();
   const [draftValue, setDraftValue] = useState(() => formatThicknessInput(valueMm));
   const normalizedBendSettings = Array.isArray(bendSettings) ? bendSettings : [];
 
@@ -170,7 +173,7 @@ export default function DxfFileSheet({
   return (
     <FileSheet
       open={open}
-      title="DXF"
+      title={t("dxf")}
       isDesktop={isDesktop}
       width={width}
       onOpenChange={onOpenChange}
@@ -184,10 +187,10 @@ export default function DxfFileSheet({
       >
         <FileStatusSection items={statusItems} />
 
-        <FileSheetSection value="dxf" title="DXF">
+        <FileSheetSection value="dxf" title={t("dxf")}>
           <FileSheetSectionBody className="py-0">
-            <FileSheetSubsection title="Thickness">
-              <FileSheetControlRow label="Material">
+            <FileSheetSubsection title={t("thickness")}>
+              <FileSheetControlRow label={t("material")}>
                 <div className="grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-1.5">
                   <Button
                     type="button"
@@ -198,8 +201,8 @@ export default function DxfFileSheet({
                       commitValue(valueMm - 0.25);
                     }}
                     disabled={!hasDxfData}
-                    aria-label="Reduce DXF material thickness"
-                    title="Reduce thickness"
+                    aria-label={t("reduceDxfMaterialThickness")}
+                    title={t("reduceThickness")}
                   >
                     <Minus className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
                   </Button>
@@ -224,7 +227,7 @@ export default function DxfFileSheet({
                         }
                       }}
                       className={`${compactInputClasses} w-full pr-9 text-right`}
-                      aria-label="DXF material thickness in millimeters"
+                      aria-label={t("dxfMaterialThickness")}
                     />
                     <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">mm</span>
                   </div>
@@ -237,15 +240,15 @@ export default function DxfFileSheet({
                       commitValue(valueMm + 0.25);
                     }}
                     disabled={!hasDxfData}
-                    aria-label="Increase DXF material thickness"
-                    title="Increase thickness"
+                    aria-label={t("increaseDxfMaterialThickness")}
+                    title={t("increaseThickness")}
                   >
                     <Plus className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
                   </Button>
                 </div>
               </FileSheetControlRow>
             </FileSheetSubsection>
-            <FileSheetSubsection title="Bends">
+            <FileSheetSubsection title={t("bends")}>
               {normalizedBendSettings.length ? normalizedBendSettings.map((setting, index) => (
                 <DxfBendRow
                   key={setting.id || `bend-${index + 1}`}

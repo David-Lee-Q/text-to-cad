@@ -14,6 +14,7 @@ import {
   SheetTitle
 } from "../ui/sheet";
 import { Switch } from "../ui/switch";
+import { useI18n } from "@/i18n";
 
 const DEFAULT_FILE_SHEET_WIDTH = 365;
 const DESKTOP_FILE_SHEET_MIN_WIDTH = 240;
@@ -464,6 +465,7 @@ export default function FileSheet({
   bodyClassName,
   children
 }) {
+  const { t } = useI18n();
   const desktopWidth = `min(${normalizeFileSheetWidth(width)}px, ${DESKTOP_FILE_SHEET_MAX_WIDTH})`;
   const sheetStyle = isDesktop
     ? {
@@ -498,7 +500,7 @@ export default function FileSheet({
         >
           <SheetHeader className="sr-only">
             <SheetTitle>{title}</SheetTitle>
-            <SheetDescription>Inspect and adjust the selected file.</SheetDescription>
+            <SheetDescription>{t("inspectAdjustFile")}</SheetDescription>
           </SheetHeader>
           {sheetBody}
         </SheetContent>
@@ -524,8 +526,8 @@ export default function FileSheet({
       {isDesktop && typeof onStartResize === "function" ? (
         <button
           type="button"
-          aria-label={`Resize ${title} sidebar`}
-          title="Resize sidebar"
+          aria-label={t("resizeSheet", { title })}
+          title={t("resizeSidebar")}
           onPointerDown={onStartResize}
           className="group/file-sheet-resize absolute inset-y-0 -left-1.5 z-30 flex h-auto w-3 cursor-col-resize touch-none items-stretch justify-center rounded-none px-0 py-0 hover:bg-transparent"
         >

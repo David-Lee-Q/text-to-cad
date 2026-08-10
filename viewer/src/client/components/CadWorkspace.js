@@ -333,7 +333,7 @@ import {
   requestImplicitCadExport
 } from "@/workbench/implicitExport";
 
-const DEFAULT_DOCUMENT_TITLE = "CAD Viewer";
+const DEFAULT_DOCUMENT_TITLE = "COSMO AI CAD";
 const LOCAL_ASSET_BACKEND = "local-fs";
 const EMPTY_LIST = Object.freeze([]);
 const MOVEIT2_SERVER_ENABLED = moveit2ServerEnabled();

@@ -238,9 +238,6 @@ export default function CadWorkspaceHome({
           {!directorySelectionActive ? (
             <div className="flex shrink-0 items-center gap-2">
               <div className="flex items-center gap-1.5">
-                <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
-                  {t("homeFilter")}
-                </span>
                 <Select
                   value={fileFilter}
                   onValueChange={(nextValue) => setFileFilter(nextValue)}

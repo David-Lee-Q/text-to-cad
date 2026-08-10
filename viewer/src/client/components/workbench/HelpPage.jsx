@@ -9,12 +9,12 @@ import { useI18n } from "@/i18n";
 
 const HELP_DOCUMENT = {
   en: {
-    description: "A user guide for CAD Viewer, the browser previewer for CAD, G-code, and robot-description files.",
+    description: "A user guide for COSMO AI CAD, the browser previewer for CAD, G-code, and robot-description files.",
     sections: [
       {
         title: "Quick Start",
         blocks: [
-          { type: "p", text: "CAD Viewer previews local CAD, G-code, and robot files directly in the browser. Select a file from the left file browser or the home screen shortcuts to start." }
+          { type: "p", text: "COSMO AI CAD previews local CAD, G-code, and robot files directly in the browser. Select a file from the left file browser or the home screen shortcuts to start." }
         ],
         subs: [
           {
@@ -31,7 +31,7 @@ const HELP_DOCUMENT = {
                 ]
               },
               { type: "p", text: "A floating toolbar and drawing toolbar overlay the viewport for view navigation and annotations." },
-              { type: "image", src: "/help-screenshots/01-home.png", alt: "CAD Viewer home screen with file browser and quick entries" }
+              { type: "image", src: "/help-screenshots/01-home.png", alt: "COSMO AI CAD home screen with file browser and quick entries" }
             ]
           },
           {
@@ -53,7 +53,7 @@ const HELP_DOCUMENT = {
       {
         title: "3D Viewing",
         blocks: [
-          { type: "p", text: "CAD Viewer renders STEP assemblies, mesh models, robot descriptions, DXF drawings, G-code toolpaths, and implicit CAD geometry in a shared 3D viewport." }
+          { type: "p", text: "COSMO AI CAD renders STEP assemblies, mesh models, robot descriptions, DXF drawings, G-code toolpaths, and implicit CAD geometry in a shared 3D viewport." }
         ],
         subs: [
           {
@@ -255,12 +255,12 @@ const HELP_DOCUMENT = {
     ]
   },
   zh: {
-    description: "CAD Viewer 用户指南，面向 CAD、G-code 与机器人描述文件的浏览器预览器。",
+    description: "COSMO AI CAD 用户指南，面向 CAD、G-code 与机器人描述文件的浏览器预览器。",
     sections: [
       {
         title: "快速入门",
         blocks: [
-          { type: "p", text: "CAD Viewer 直接在浏览器中预览本地 CAD、G-code 与机器人描述文件。从左侧文件浏览器或首页快捷入口选择一个文件即可开始。" }
+          { type: "p", text: "COSMO AI CAD 直接在浏览器中预览本地 CAD、G-code 与机器人描述文件。从左侧文件浏览器或首页快捷入口选择一个文件即可开始。" }
         ],
         subs: [
           {
@@ -277,7 +277,7 @@ const HELP_DOCUMENT = {
                 ]
               },
               { type: "p", text: "悬浮工具栏与绘图工具栏覆盖在视口上，用于视图导航与标注。" },
-              { type: "image", src: "/help-screenshots/01-home.png", alt: "CAD Viewer 首页，包含文件浏览器与快捷入口" }
+              { type: "image", src: "/help-screenshots/01-home.png", alt: "COSMO AI CAD 首页，包含文件浏览器与快捷入口" }
             ]
           },
           {
@@ -299,7 +299,7 @@ const HELP_DOCUMENT = {
       {
         title: "三维查看",
         blocks: [
-          { type: "p", text: "CAD Viewer 在共享的 3D 视口中渲染 STEP 装配体、网格模型、机器人描述文件、DXF 图纸、G-code 刀路与隐式 CAD 几何。" }
+          { type: "p", text: "COSMO AI CAD 在共享的 3D 视口中渲染 STEP 装配体、网格模型、机器人描述文件、DXF 图纸、G-code 刀路与隐式 CAD 几何。" }
         ],
         subs: [
           {

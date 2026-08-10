@@ -31,7 +31,7 @@ function bootstrap() {
     throw new Error(`Missing #${ROOT_ID} mount point.`);
   }
   ensureFavicon();
-  document.title = "CAD Viewer";
+  document.title = "COSMO AI CAD";
   const cachedRoot = globalThis[ROOT_CACHE_KEY];
   const root = cachedRoot?.element === rootElement && cachedRoot?.root
     ? cachedRoot.root

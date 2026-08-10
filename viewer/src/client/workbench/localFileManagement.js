@@ -68,9 +68,10 @@ async function readJsonErrorPayload(response, fallback) {
 }
 
 function refreshAfterLocalFilesChange(payload) {
-  if (payload?.catalog) {
-    refreshCadCatalog({ markRefreshing: false }).catch(() => {});
-  }
+  refreshCadCatalog({
+    markRefreshing: false,
+    catalog: payload?.catalog || null
+  }).catch(() => {});
 }
 
 export async function requestLocalFileUpload({ file }) {

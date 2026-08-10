@@ -240,15 +240,19 @@ async function fetchWithTimeout(url, options, timeoutMs, timeoutMessage) {
   }
 }
 
-export async function refreshCadCatalog({ markRefreshing = !currentSnapshot.catalogHydrated } = {}) {
+export async function refreshCadCatalog({ markRefreshing = !currentSnapshot.catalogHydrated, catalog: knownCatalog = null } = {}) {
   if (typeof window === "undefined") {
+    return;
+  }
+  const activeDir = readActiveCadDir();
+  if (knownCatalog) {
+    publishCadManifest(knownCatalog, { hydrated: true, refreshing: false, error: "", activeDir });
     return;
   }
   if (refreshInFlight) {
     return refreshInFlight;
   }
   const requestId = ++refreshRequestId;
-  const activeDir = readActiveCadDir();
   if (markRefreshing) {
     publishCadRefreshState({ refreshing: true, error: "", activeDir });
   }

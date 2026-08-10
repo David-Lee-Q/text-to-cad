@@ -46,6 +46,21 @@ function normalizeLocalEntryName(value) {
   return raw;
 }
 
+function companionFilesFor(sourcePath) {
+  const sourceBasename = path.basename(sourcePath);
+  const prefix = `.${sourceBasename}`;
+  const dir = path.dirname(sourcePath);
+  let names = [];
+  try {
+    names = fs.readdirSync(dir);
+  } catch {
+    return [];
+  }
+  return names
+    .filter((name) => name.startsWith(prefix))
+    .map((name) => path.join(dir, name));
+}
+
 function toPosixPath(value) {
   return String(value || "").split(path.sep).join("/");
 }
@@ -1047,7 +1062,23 @@ export function createLocalAssetBackend({
       if (fs.existsSync(nextPath)) {
         throw new Error(`An entry named "${nextName}" already exists`);
       }
+      const companions = companionFilesFor(sourcePath);
+      const sourceBasename = path.basename(sourcePath);
+      const nextBasename = path.basename(nextPath);
       fs.renameSync(sourcePath, nextPath);
+      companions.forEach((companionPath) => {
+        const companionName = path.basename(companionPath);
+        const suffix = companionName.slice(`.${sourceBasename}`.length);
+        const nextCompanionPath = path.join(path.dirname(nextPath), `.${nextBasename}${suffix}`);
+        if (fs.existsSync(nextCompanionPath)) {
+          return;
+        }
+        try {
+          fs.renameSync(companionPath, nextCompanionPath);
+        } catch {
+          // Keep the companion file in place if it cannot be moved.
+        }
+      });
     }
     const isDirectory = fs.statSync(nextPath).isDirectory();
     let nextCatalog = null;
@@ -1094,6 +1125,13 @@ export function createLocalAssetBackend({
       };
     }
     fs.unlinkSync(sourcePath);
+    for (const companionPath of companionFilesFor(sourcePath)) {
+      try {
+        fs.unlinkSync(companionPath);
+      } catch {
+        // Best-effort cleanup of companion artifacts.
+      }
+    }
     const currentCatalog = readCatalog({ rootDir: resolvedRoot.dir });
     const nextCatalog = replaceCatalogEntry(currentCatalog, absoluteFileRef(sourcePath), null);
     catalogCache.set(`dir:${resolvedRoot.dir}`, nextCatalog);

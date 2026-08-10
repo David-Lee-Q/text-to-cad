@@ -1113,7 +1113,15 @@ export function createLocalAssetBackend({
 
   function deleteLocalEntry({ rootDir, fileRef } = {}) {
     const { resolvedRoot, localDir } = resolveLocalFilesContext(rootDir);
-    const sourcePath = requireManagedLocalEntry(fileRef, resolvedRoot, localDir);
+    let sourcePath;
+    try {
+      sourcePath = requireManagedLocalEntry(fileRef, resolvedRoot, localDir);
+    } catch (error) {
+      if (String(error?.message || "").includes("Entry not found")) {
+        return cleanupGhostLocalEntry({ resolvedRoot, localDir, fileRef });
+      }
+      throw error;
+    }
     const isDirectory = fs.statSync(sourcePath).isDirectory();
     if (isDirectory) {
       fs.rmSync(sourcePath, { recursive: true, force: false });
@@ -1137,6 +1145,26 @@ export function createLocalAssetBackend({
     catalogCache.set(`dir:${resolvedRoot.dir}`, nextCatalog);
     return {
       fileRef: relativeFileRef(resolvedRoot.rootPath, sourcePath),
+      ok: true,
+      catalog: nextCatalog,
+    };
+  }
+
+  function cleanupGhostLocalEntry({ resolvedRoot, localDir, fileRef }) {
+    const candidate = filePathFromRef(fileRef, resolvedRoot);
+    if (!candidate || !isInsideLocalFilesDirectory(resolvedRoot.rootPath, candidate) || candidate === localDir) {
+      throw new Error(`Entry not found: ${fileRef}`);
+    }
+    for (const companionPath of companionFilesFor(candidate)) {
+      try {
+        fs.unlinkSync(companionPath);
+      } catch {
+        // Best-effort cleanup of ghost companion artifacts.
+      }
+    }
+    const nextCatalog = refreshCatalog({ rootDir: resolvedRoot.dir });
+    return {
+      fileRef: relativeFileRef(resolvedRoot.rootPath, candidate),
       ok: true,
       catalog: nextCatalog,
     };

@@ -969,10 +969,20 @@ function GitLogTooltip() {
                 >
                   {message || "—"}
                 </span>
-                <span className="shrink-0 text-[10px] leading-5 text-muted-foreground tabular-nums">
+                <span
+                  className={cn(
+                    "shrink-0 text-[10px] leading-5 tabular-nums",
+                    isLatest ? "font-bold text-primary" : "text-muted-foreground"
+                  )}
+                >
                   {date}
                 </span>
-                <span className="shrink-0 font-mono text-[10px] leading-5 text-muted-foreground">
+                <span
+                  className={cn(
+                    "shrink-0 font-mono text-[10px] leading-5",
+                    isLatest ? "font-bold text-primary" : "text-muted-foreground"
+                  )}
+                >
                   {hash}
                 </span>
               </div>

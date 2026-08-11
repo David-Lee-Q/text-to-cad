@@ -83,6 +83,7 @@ import {
 } from "@/workbench/breadcrumbs";
 import LanguageToggle from "./LanguageToggle";
 import HelpButton from "./HelpButton";
+import AiAssistantButton from "./AiAssistantButton";
 import { useI18n } from "@/i18n";
 import viewerPackage from "../../../../package.json";
 
@@ -1089,6 +1090,7 @@ export default function CadWorkspaceTopBar({
   fileSheetOpen = false,
   onToggleFileSheet,
   onAiChatOpen,
+  aiChatOpen = false,
   navigationAvailable = true
 }) {
   const viewerVersion = String(viewerPackage.version || "").trim();
@@ -1285,17 +1287,7 @@ export default function CadWorkspaceTopBar({
 
       <TooltipProvider delayDuration={250}>
         <div className="flex shrink-0 items-center gap-1.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("aiOpen")}
-            title={t("aiOpen")}
-            className={topBarIconButtonClasses}
-            onClick={() => onAiChatOpen?.()}
-          >
-            <Bot className={topBarIconClasses} />
-          </Button>
+          <AiAssistantButton aiChatOpen={aiChatOpen} onAiChatOpen={onAiChatOpen} />
           <HelpButton />
           <LanguageToggle />
           <VersionReleaseLink />

@@ -8951,6 +8951,7 @@ export default function CadWorkspace({
           fileSheetOpen={fileSheetOpen}
           onToggleFileSheet={handleToggleFileSheet}
           onAiChatOpen={() => setAiChatOpen(true)}
+          aiChatOpen={aiChatOpen}
           navigationAvailable={directoryNavigationAvailable}
         />
         <AIChatDrawer

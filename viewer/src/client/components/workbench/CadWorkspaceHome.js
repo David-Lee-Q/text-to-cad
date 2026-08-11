@@ -41,7 +41,7 @@ import {
 } from "@/workbench/localFileManagement";
 import { useI18n } from "@/i18n";
 
-const MAX_HOME_OPTIONS = 6;
+const MAX_HOME_OPTIONS = 20;
 
 const HOME_FILE_FILTERS = Object.freeze([
   { value: "all", match: () => true },
@@ -299,7 +299,7 @@ export default function CadWorkspaceHome({
           ) : null}
         </div>
 
-        <div className="divide-y divide-sidebar-border/70">
+        <div className="max-h-[60vh] divide-y divide-sidebar-border/70 overflow-y-auto">
           {directorySelectionActive ? (
             hasDirectoryOptions ? normalizedDirectoryOptions.map((option) => {
               const label = directoryLabelForOption(option);

@@ -743,3 +743,157 @@ export function serveDistAsset({ distRoot, indexHtmlPath = path.join(distRoot, "
     });
   };
 }
+
+export function buildIntentPrompt({ text, context = {} }) {
+  const files = Array.isArray(context.catalog)
+    ? context.catalog.map((entry) => `${entry.key}=${entry.label || entry.key}`).join("; ")
+    : "";
+  const parameters = Array.isArray(context.parameters)
+    ? context.parameters.map((entry) => `${entry.id}=${entry.label || entry.id}`).join("; ")
+    : "";
+  const fileName = String(context.fileName || "").trim();
+  const fileFormat = String(context.fileFormat || context.sourceFormat || "").trim();
+  const currentContext = [
+    fileName ? `Current file: ${fileName}${fileFormat ? ` (${fileFormat})` : ""}` : "No file is currently open.",
+    files ? `Available files: ${files}` : "",
+    parameters ? `Available parameters: ${parameters}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return [
+    "You are the command router for a CAD model viewer assistant. Map the user's message to exactly ONE intent from the list below, filling params according to its schema. Write the reply text in the same language as the user's message (Simplified Chinese if the user writes Chinese, otherwise English).",
+    "",
+    "Intents and param schemas:",
+    '- "help": {}',
+    '- "openFile": {"fileKey": "<key from the file list>"}',
+    '- "setDisplayMode": {"mode": "solid"|"rendered"|"transparent"|"hidden_edges"|"hidden_lines_removed"|"unshaded"|"wireframe"}',
+    '- "setProjection": {"projection": "orthographic"|"perspective"}',
+    '- "fitView": {}',
+    '- "resetView": {}',
+    '- "hideAll": {}',
+    '- "showAll": {}',
+    '- "hideOthers": {}',
+    '- "playAnimation": {}',
+    '- "pauseAnimation": {}',
+    '- "screenshot": {}',
+    '- "enterPreview": {}',
+    '- "exitPreview": {}',
+    '- "resetParams": {}',
+    '- "resetPose": {}',
+    '- "setParam": {"id": "<parameter id from the list>", "value": <number>}',
+    '- "setColor": {"hex": "<0xRRGGBB>", "color": "<color name>"} (use {"hex": null} to restore the default color)',
+    '- "rotateModel": {"angleDeg": <number>}',
+    '- "playDance": {}',
+    '- "stopDance": {}',
+    '- "darkTheme": {}',
+    '- "lightTheme": {}',
+    "",
+    currentContext,
+    "",
+    "Examples:",
+    '用户说"把模型颜色改成红色" → {"intent":"setColor","params":{"hex":"0xFF0000","color":"red"},"reply":"颜色已设置为红色。"}',
+    '用户说"旋转45度" → {"intent":"rotateModel","params":{"angleDeg":45},"reply":"模型已旋转45度。"}',
+    '用户说"打开 calibration_block" → {"intent":"openFile","params":{"fileKey":"calibration_block.step"},"reply":"已打开 calibration_block.step。"}',
+    '用户说"你好" → {"intent":"chat","reply":"你好！我可以帮你打开、查看和操作 3D 模型。"}',
+    "",
+    'If the message matches no intent, respond with {"intent": "chat", "reply": "<helpful answer in the user\'s language>"}.',
+    "Output ONLY a single valid JSON object. No markdown fences, no extra commentary.",
+  ].join("\n");
+}
+
+function extractLlmJson(content) {
+  const text = String(content || "").trim();
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first >= 0 && last > first) {
+    try {
+      return JSON.parse(text.slice(first, last + 1));
+    } catch {
+      // fall through to chat fallback
+    }
+  }
+  return null;
+}
+
+export function createChatProxyMiddleware({
+  apiKey = process.env.OPENAI_API_KEY,
+  baseUrl = process.env.OPENAI_BASE_URL || "https://gpt.cosmoplat.com/v1",
+  model = process.env.OPENAI_MODEL || "cosmo-mind-nothink",
+  timeoutMs = 60000,
+} = {}) {
+  return async function chatProxyMiddleware(req, res, next) {
+    const requestUrl = new URL(req.url || "/", "http://localhost");
+    if (requestUrl.pathname !== "/__cad/chat") {
+      next();
+      return;
+    }
+    if (String(req.method || "GET").toUpperCase() !== "POST") {
+      res.setHeader("allow", "POST");
+      sendJson(res, 405, { error: "Use POST to /__cad/chat" });
+      return;
+    }
+    if (!apiKey) {
+      sendJson(res, 503, { error: "LLM API key is not configured" });
+      return;
+    }
+    let body;
+    try {
+      body = await readJsonBody(req, { limitBytes: 64 * 1024 });
+    } catch (error) {
+      sendJson(res, 400, { error: errorMessage(error) });
+      return;
+    }
+    const text = String(body?.text || "").trim();
+    if (!text) {
+      sendJson(res, 400, { error: "Missing text" });
+      return;
+    }
+    const systemPrompt = buildIntentPrompt({ text, context: body.context || {} });
+    let upstream;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        upstream = await fetch(`${baseUrl.replace(/\/+$/u, "")}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0.1,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: text },
+            ],
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch (error) {
+      sendJson(res, 502, { error: errorMessage(error) });
+      return;
+    }
+    if (!upstream.ok) {
+      sendJson(res, 502, { error: `LLM upstream ${upstream.status}` });
+      return;
+    }
+    let content = "";
+    try {
+      const payload = await upstream.json();
+      content = String(payload?.choices?.[0]?.message?.content || "").trim();
+    } catch (error) {
+      sendJson(res, 502, { error: errorMessage(error) });
+      return;
+    }
+    const parsed = extractLlmJson(content);
+    sendJson(res, 200, {
+      intent: String(parsed?.intent || "chat"),
+      params: parsed?.params && typeof parsed.params === "object" ? parsed.params : {},
+      reply: String(parsed?.reply || "").trim() || content,
+    });
+  };
+}

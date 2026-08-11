@@ -9,7 +9,7 @@ import {
   SheetTitle
 } from "@/components/ui/sheet";
 import { RENDER_FORMAT } from "@/workbench/constants";
-import { AI_INTENTS, buildCommandRows, parseAiCommand } from "@/workbench/aiCommands";
+import { AI_INTENTS, COLOR_KEYWORDS, buildCommandRows, parseAiCommand } from "@/workbench/aiCommands";
 import { useI18n } from "@/i18n";
 
 function isStepLike(sourceFormat) {
@@ -24,6 +24,88 @@ function isRobotLike(sourceFormat) {
   return sourceFormat === RENDER_FORMAT.URDF ||
     sourceFormat === RENDER_FORMAT.SRDF ||
     sourceFormat === RENDER_FORMAT.SDF;
+}
+
+function normalizeLlmHex(value) {
+  if (value == null || value === "") {
+    return null;
+  }
+  const text = String(value).trim();
+  if (/^0x/i.test(text)) {
+    return parseInt(text.slice(2), 16);
+  }
+  if (text.startsWith("#")) {
+    return parseInt(text.slice(1), 16);
+  }
+  const numeric = Number(text);
+  return Number.isFinite(numeric) ? numeric : undefined;
+}
+
+function normalizeLlmResult(data, context) {
+  const intent = String(data?.intent || "").trim();
+  const params = data?.params && typeof data.params === "object" ? data.params : {};
+  const reply = String(data?.reply || "").trim();
+  if (intent === AI_INTENTS.OPEN_FILE) {
+    const key = String(params.fileKey ?? params.key ?? params.file ?? "");
+    const file = (context.catalog || []).find(
+      (entry) => entry.key === key || entry.label === key
+    );
+    if (!file) {
+      return { intent: "chat", params: {}, reply: reply || key };
+    }
+    return { intent, params: { file, query: key } };
+  }
+  if (intent === AI_INTENTS.SET_PARAM) {
+    const id = String(params.id ?? params.parameterId ?? "");
+    const parameter = (context.parameters || []).find(
+      (entry) => entry.id === id || entry.label === id
+    );
+    if (!parameter) {
+      return { intent: "chat", params: {}, reply: reply || id };
+    }
+    return { intent, params: { parameter, value: params.value, query: id } };
+  }
+  if (intent === AI_INTENTS.SET_COLOR) {
+    let hex = normalizeLlmHex(params.hex);
+    if (hex === undefined) {
+      const name = String(params.color || "").trim().toLowerCase();
+      const known = name ? COLOR_KEYWORDS[name] : undefined;
+      hex = known !== undefined ? known : null;
+    }
+    return { intent, params: { hex, color: String(params.color || params.hex || "") } };
+  }
+  if (intent === AI_INTENTS.ROTATE_MODEL) {
+    const angleDeg = Number(params.angleDeg ?? params.angle);
+    if (!Number.isFinite(angleDeg)) {
+      return { intent: "chat", params: {}, reply: reply || "" };
+    }
+    return { intent, params: { angleDeg } };
+  }
+  if (Object.values(AI_INTENTS).includes(intent)) {
+    return { intent, params };
+  }
+  return { intent: "chat", params: {}, reply };
+}
+
+async function requestLlm(text, context) {
+  const response = await fetch("/__cad/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      text,
+      context: {
+        sourceFormat: context?.sourceFormat,
+        fileName: context?.fileName,
+        fileFormat: context?.fileFormatLabel,
+        catalog: context?.catalog || [],
+        parameters: context?.parameters || []
+      }
+    })
+  });
+  if (!response.ok) {
+    return null;
+  }
+  return response.json();
 }
 
 function buildReply(result, { context, actions, t }) {
@@ -242,28 +324,50 @@ export default function AIChatDrawer({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
 
-  const sendCommand = (text) => {
+  const sendCommand = async (text) => {
     const trimmed = String(text || "").trim();
     if (!trimmed) {
       return;
     }
-    const parsed = parseAiCommand(trimmed, {
-      sourceFormat: context.sourceFormat,
-      catalog: context.catalog || [],
-      parameters: context.parameters || []
-    });
-    let reply;
-    if (!parsed) {
-      reply = { kind: "error", text: t("aiUnknown") };
-    } else {
-      reply = buildReply(parsed, { context, actions, t });
-    }
+    const pendingId = `a-${Date.now() + 1}`;
     setMessages((current) => [
       ...current,
       { id: `u-${Date.now()}`, role: "user", text: trimmed },
-      { id: `a-${Date.now() + 1}`, role: "assistant", kind: reply.kind, text: reply.text }
+      { id: pendingId, role: "assistant", kind: "pending", text: t("aiThinking") }
     ]);
     setInput("");
+    let reply;
+    try {
+      const parsed = parseAiCommand(trimmed, {
+        sourceFormat: context.sourceFormat,
+        catalog: context.catalog || [],
+        parameters: context.parameters || []
+      });
+      if (parsed) {
+        reply = buildReply(parsed, { context, actions, t });
+      } else {
+        const llm = await requestLlm(trimmed, context);
+        if (!llm) {
+          reply = { kind: "error", text: t("aiUnknown") };
+        } else {
+          const result = normalizeLlmResult(llm, context);
+          if (result.intent === "chat") {
+            reply = { kind: "ok", text: result.reply || t("aiUnknown") };
+          } else {
+            reply = buildReply(result, { context, actions, t });
+          }
+        }
+      }
+    } catch (error) {
+      reply = { kind: "error", text: t("aiUnknown") };
+    }
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === pendingId
+          ? { ...message, kind: reply.kind, text: reply.text }
+          : message
+      )
+    );
   };
 
   const sendMessage = () => {

@@ -141,6 +141,47 @@ function buildReply(result, { context, actions, t }) {
       actions?.resetPose?.();
       return { kind: "ok", text: t("aiResetPose") };
 
+    case AI_INTENTS.SET_COLOR: {
+      if (params?.hex === null) {
+        const applied = actions?.setColor?.(null) !== false;
+        if (!applied) {
+          return { kind: "error", text: t("aiNoFile") };
+        }
+        return { kind: "ok", text: t("aiColorReset") };
+      }
+      if (!params?.hex) {
+        return { kind: "error", text: t("aiColorUnknown", { color: params?.color || "" }) };
+      }
+      const applied = actions?.setColor?.(params.hex) !== false;
+      if (!applied) {
+        return { kind: "error", text: t("aiNoFile") };
+      }
+      return { kind: "ok", text: t("aiColorSet", { color: params.color }) };
+    }
+
+    case AI_INTENTS.ROTATE_MODEL: {
+      if (!Number.isFinite(params?.angleDeg)) {
+        return { kind: "error", text: t("aiRotateInvalid") };
+      }
+      const applied = actions?.rotateModel?.(params.angleDeg) !== false;
+      if (!applied) {
+        return { kind: "error", text: t("aiNoFile") };
+      }
+      return { kind: "ok", text: t("aiRotated", { angle: params.angleDeg }) };
+    }
+
+    case AI_INTENTS.PLAY_DANCE: {
+      const applied = actions?.playDanceAnimation?.() !== false;
+      if (!applied) {
+        return { kind: "error", text: t("aiNoFile") };
+      }
+      return { kind: "ok", text: t("aiDanceStart") };
+    }
+
+    case AI_INTENTS.STOP_DANCE:
+      actions?.stopDanceAnimation?.();
+      return { kind: "ok", text: t("aiDanceStop") };
+
     case AI_INTENTS.DARK_THEME:
       actions?.setTheme?.("dark");
       return { kind: "ok", text: t("aiDarkTheme") };
@@ -171,7 +212,8 @@ export default function AIChatDrawer({
   open,
   onOpenChange,
   actions = {},
-  context = {}
+  context = {},
+  width = 280
 }) {
   const { t, lang } = useI18n();
   const [messages, setMessages] = useState(() => [{
@@ -292,7 +334,7 @@ export default function AIChatDrawer({
         className="sm:max-w-md"
         overlayClassName="bg-black/20 !top-11"
         showCloseButton={false}
-        style={{ top: "44px", height: "auto" }}
+        style={{ top: "44px", height: "auto", width: `${width}px` }}
       >
         <SheetTitle className="sr-only">{t("aiTitle")}</SheetTitle>
         <div className="flex h-full min-h-0 flex-col gap-3 py-4">

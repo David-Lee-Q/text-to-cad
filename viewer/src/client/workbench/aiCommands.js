@@ -20,6 +20,10 @@ export const AI_INTENTS = Object.freeze({
   RESET_PARAMS: "resetParams",
   SET_PARAM: "setParam",
   RESET_POSE: "resetPose",
+  SET_COLOR: "setColor",
+  ROTATE_MODEL: "rotateModel",
+  PLAY_DANCE: "playDance",
+  STOP_DANCE: "stopDance",
   DARK_THEME: "darkTheme",
   LIGHT_THEME: "lightTheme"
 });
@@ -38,6 +42,47 @@ export const PROJECTION_OPTIONS = Object.freeze([
   { zh: "正射", en: "orthographic" },
   { zh: "透视", en: "perspective" }
 ]);
+
+export const COLOR_KEYWORDS = Object.freeze({
+  red: 0xef4444,
+  红: 0xef4444,
+  红色: 0xef4444,
+  blue: 0x3b82f6,
+  蓝: 0x3b82f6,
+  蓝色: 0x3b82f6,
+  green: 0x22c55e,
+  绿: 0x22c55e,
+  绿色: 0x22c55e,
+  yellow: 0xeab308,
+  黄: 0xeab308,
+  黄色: 0xeab308,
+  orange: 0xf97316,
+  橙: 0xf97316,
+  橙色: 0xf97316,
+  purple: 0xa855f7,
+  紫: 0xa855f7,
+  紫色: 0xa855f7,
+  pink: 0xec4899,
+  粉: 0xec4899,
+  粉色: 0xec4899,
+  cyan: 0x06b6d4,
+  青: 0x06b6d4,
+  青色: 0x06b6d4,
+  white: 0xffffff,
+  白: 0xffffff,
+  白色: 0xffffff,
+  black: 0x0f172a,
+  黑: 0x0f172a,
+  黑色: 0x0f172a,
+  gray: 0x64748b,
+  灰: 0x64748b,
+  灰色: 0x64748b,
+  default: null,
+  默认: null,
+  恢复: null,
+  还原: null,
+  reset: null
+});
 
 const MODE_ROWS = DISPLAY_MODE_OPTIONS.map((option) => ({
   zh: option.zh,
@@ -70,6 +115,10 @@ export const AI_COMMAND_ROWS = Object.freeze([
   { zh: "设置参数 <名称> <值>", en: "set parameter <name> <value>", commandZh: "设置参数 ", commandEn: "set parameter " },
   { zh: "重置参数", en: "reset parameters", commandZh: "重置参数", commandEn: "reset parameters" },
   { zh: "重置姿态", en: "reset pose", commandZh: "重置姿态", commandEn: "reset pose" },
+  { zh: "变颜色 <颜色>", en: "set color <color>", commandZh: "变颜色 ", commandEn: "set color " },
+  { zh: "旋转 <角度>", en: "rotate <angle>", commandZh: "旋转 ", commandEn: "rotate " },
+  { zh: "跳舞", en: "dance", commandZh: "跳舞", commandEn: "dance" },
+  { zh: "停止跳舞", en: "stop dance", commandZh: "停止跳舞", commandEn: "stop dance" },
   { zh: "播放动画", en: "play animation", commandZh: "播放动画", commandEn: "play animation" },
   { zh: "暂停动画", en: "pause animation", commandZh: "暂停动画", commandEn: "pause animation" },
   { zh: "进入预览", en: "preview mode", commandZh: "进入预览", commandEn: "preview mode" },
@@ -162,6 +211,10 @@ const EXACT_COMMANDS = Object.freeze({
   "重置参数": AI_INTENTS.RESET_PARAMS,
   "reset pose": AI_INTENTS.RESET_POSE,
   "重置姿态": AI_INTENTS.RESET_POSE,
+  "dance": AI_INTENTS.PLAY_DANCE,
+  "跳舞": AI_INTENTS.PLAY_DANCE,
+  "stop dance": AI_INTENTS.STOP_DANCE,
+  "停止跳舞": AI_INTENTS.STOP_DANCE,
   "dark mode": AI_INTENTS.DARK_THEME,
   "深色模式": AI_INTENTS.DARK_THEME,
   "light mode": AI_INTENTS.LIGHT_THEME,
@@ -258,6 +311,32 @@ export function parseAiCommand(text, context = {}) {
         query: match[1],
         value: Number(match[2])
       },
+      match: text.trim()
+    };
+  }
+
+  match = input.match(/^(?:set color|变颜色|变色)\s+([\w\u4e00-\u9fa5]+)$/i);
+  if (match) {
+    const keyword = normalize(match[1]);
+    return {
+      intent: AI_INTENTS.SET_COLOR,
+      params: {
+        color: match[1].trim(),
+        hex: Object.prototype.hasOwnProperty.call(COLOR_KEYWORDS, keyword)
+          ? COLOR_KEYWORDS[keyword]
+          : undefined
+      },
+      match: text.trim()
+    };
+  }
+
+  match = input.match(/^(?:rotate|旋转|转动)\s+(.+)$/i);
+  if (match) {
+    const raw = match[1].trim().replace(/\s*(?:°|度|deg)\s*$/i, "");
+    const angleDeg = Number(raw);
+    return {
+      intent: AI_INTENTS.ROTATE_MODEL,
+      params: { angleDeg: Number.isFinite(angleDeg) ? angleDeg : NaN },
       match: text.trim()
     };
   }

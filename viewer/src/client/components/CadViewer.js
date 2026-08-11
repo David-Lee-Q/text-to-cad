@@ -2155,6 +2155,8 @@ const CadViewer = forwardRef(function CadViewer({
   const [defaultPerspectiveDetached, setDefaultPerspectiveDetached] = useState(false);
   const [error, setError] = useState("");
   const { t } = useI18n();
+  const danceRafRef = useRef(0);
+  const dancePoseRef = useRef(null);
   const [viewerReadyTick, setViewerReadyTick] = useState(0);
   const [runtimeResetToken, setRuntimeResetToken] = useState(0);
   const [activeViewPlaneFace, setActiveViewPlaneFace] = useState("");
@@ -2925,6 +2927,95 @@ const CadViewer = forwardRef(function CadViewer({
     },
     focusViewPreset(faceId) {
       return activateViewPlaneFace(faceId);
+    },
+    setPartColor(colorHex) {
+      const runtime = runtimeRef.current;
+      if (!runtime?.modelGroup) {
+        return false;
+      }
+      runtime.modelGroup.traverse((object) => {
+        const material = Array.isArray(object?.material)
+          ? object.material[0]
+          : object?.material;
+        if (!material?.color) {
+          return;
+        }
+        if (!object.userData.cadAiDefaultColor) {
+          const sourceColor = material.userData?.cadSourceColor;
+          object.userData.cadAiDefaultColor =
+            sourceColor && typeof sourceColor.clone === "function"
+              ? sourceColor.clone()
+              : material.color.clone();
+        }
+        if (colorHex == null) {
+          material.color.copy(object.userData.cadAiDefaultColor);
+        } else {
+          material.color.setHex(colorHex);
+        }
+      });
+      runtime.requestRender?.();
+      return true;
+    },
+    rotateModelBy(angleDeg) {
+      const runtime = runtimeRef.current;
+      if (!runtime?.modelGroup) {
+        return false;
+      }
+      runtime.modelGroup.rotation.y += (Number(angleDeg) * Math.PI) / 180;
+      runtime.requestRender?.();
+      return true;
+    },
+    playDanceAnimation() {
+      const runtime = runtimeRef.current;
+      if (!runtime?.modelGroup) {
+        return false;
+      }
+      if (danceRafRef.current) {
+        window.cancelAnimationFrame(danceRafRef.current);
+        danceRafRef.current = 0;
+      }
+      dancePoseRef.current = {
+        x: runtime.modelGroup.position.x,
+        y: runtime.modelGroup.position.y,
+        z: runtime.modelGroup.position.z,
+        rx: runtime.modelGroup.rotation.x,
+        ry: runtime.modelGroup.rotation.y,
+        rz: runtime.modelGroup.rotation.z
+      };
+      const startedAt = typeof performance !== "undefined" && typeof performance.now === "function"
+        ? performance.now()
+        : Date.now();
+      const danceFrame = () => {
+        const elapsed = ((typeof performance !== "undefined" && typeof performance.now === "function"
+          ? performance.now()
+          : Date.now()) - startedAt) / 1000;
+        const current = runtimeRef.current;
+        const pose = dancePoseRef.current;
+        if (current?.modelGroup && pose) {
+          current.modelGroup.rotation.z = pose.rz + Math.sin(elapsed * 2.2) * 0.18;
+          current.modelGroup.rotation.y = pose.ry + Math.sin(elapsed * 1.4) * 0.12;
+          current.modelGroup.position.y = pose.y + Math.abs(Math.sin(elapsed * 3)) * 0.05;
+          current.requestRender?.();
+        }
+        danceRafRef.current = window.requestAnimationFrame(danceFrame);
+      };
+      danceRafRef.current = window.requestAnimationFrame(danceFrame);
+      return true;
+    },
+    stopDanceAnimation() {
+      if (danceRafRef.current) {
+        window.cancelAnimationFrame(danceRafRef.current);
+        danceRafRef.current = 0;
+      }
+      const runtime = runtimeRef.current;
+      if (runtime?.modelGroup && dancePoseRef.current) {
+        runtime.modelGroup.rotation.z = dancePoseRef.current.rz;
+        runtime.modelGroup.rotation.y = dancePoseRef.current.ry;
+        runtime.modelGroup.position.y = dancePoseRef.current.y;
+        runtime.requestRender?.();
+      }
+      dancePoseRef.current = null;
+      return true;
     }
   }), [
     activeSelectorRuntime,

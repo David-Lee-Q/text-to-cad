@@ -8757,6 +8757,10 @@ export default function CadWorkspace({
     resetParams: () => handleResetImplicitParameters(),
     setParam: (id, value) => handleImplicitParameterChange(id, value),
     resetPose: () => handleResetUrdfPose(),
+    setColor: (colorHex) => viewerRef.current?.setPartColor?.(colorHex) ?? false,
+    rotateModel: (angleDeg) => viewerRef.current?.rotateModelBy?.(angleDeg) ?? false,
+    playDanceAnimation: () => viewerRef.current?.playDanceAnimation?.() ?? false,
+    stopDanceAnimation: () => viewerRef.current?.stopDanceAnimation?.(),
     setTheme: (preference) => handleColorSchemePreferenceChange(preference)
   }), [
     handleSelectEntry,
@@ -8954,6 +8958,7 @@ export default function CadWorkspace({
           onOpenChange={setAiChatOpen}
           actions={aiChatActions}
           context={aiChatContext}
+          width={sidebarWidth}
         />
 
         <div className="pointer-events-none relative min-h-0 flex-1 overflow-hidden">

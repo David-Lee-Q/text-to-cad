@@ -1,5 +1,20 @@
-import { CAD_DISPLAY_MODE } from "cadjs/lib/displaySettings";
-import { CAMERA_PROJECTION } from "cadjs/lib/perspective";
+import { CAD_DISPLAY_MODE } from "cadjs/lib/displaySettings.js";
+import { CAMERA_PROJECTION } from "cadjs/lib/perspective.js";
+import { RENDER_FORMAT } from "./constants.js";
+
+function isStepLike(sourceFormat) {
+  return sourceFormat === RENDER_FORMAT.STEP;
+}
+
+function isImplicitLike(sourceFormat) {
+  return sourceFormat === RENDER_FORMAT.IMPLICIT;
+}
+
+function isRobotLike(sourceFormat) {
+  return sourceFormat === RENDER_FORMAT.URDF ||
+    sourceFormat === RENDER_FORMAT.SRDF ||
+    sourceFormat === RENDER_FORMAT.SDF;
+}
 
 export const AI_INTENTS = Object.freeze({
   HELP: "help",
@@ -88,33 +103,35 @@ const MODE_ROWS = DISPLAY_MODE_OPTIONS.map((option) => ({
   zh: option.zh,
   en: option.en,
   commandZh: `设置显示模式 ${option.zh}`,
-  commandEn: `set display mode ${option.en}`
+  commandEn: `set display mode ${option.en}`,
+  formats: ["step"]
 }));
 
 const PROJECTION_ROWS = PROJECTION_OPTIONS.map((option) => ({
   zh: option.zh,
   en: option.en,
   commandZh: `设置投影 ${option.zh}`,
-  commandEn: `set projection ${option.en}`
+  commandEn: `set projection ${option.en}`,
+  formats: ["step"]
 }));
 
 export const AI_COMMAND_ROWS = Object.freeze([
   { zh: "帮助", en: "help", commandZh: "帮助", commandEn: "help" },
   { zh: "打开 <文件名>", en: "open <file name>", commandZh: "打开 ", commandEn: "open " },
-  { zh: "设置显示模式 <模式>", en: "set display mode <mode>", commandZh: "设置显示模式 ", commandEn: "set display mode " },
+  { zh: "设置显示模式 <模式>", en: "set display mode <mode>", commandZh: "设置显示模式 ", commandEn: "set display mode ", formats: ["step"] },
   ...MODE_ROWS,
-  { zh: "设置投影 <投影>", en: "set projection <projection>", commandZh: "设置投影 ", commandEn: "set projection " },
+  { zh: "设置投影 <投影>", en: "set projection <projection>", commandZh: "设置投影 ", commandEn: "set projection ", formats: ["step"] },
   ...PROJECTION_ROWS,
   { zh: "适应视图", en: "fit view", commandZh: "适应视图", commandEn: "fit view" },
   { zh: "重置视图", en: "reset view", commandZh: "重置视图", commandEn: "reset view" },
   { zh: "截图", en: "screenshot", commandZh: "截图", commandEn: "screenshot" },
-  { zh: "隐藏所有零件", en: "hide all parts", commandZh: "隐藏所有零件", commandEn: "hide all parts" },
-  { zh: "显示所有零件", en: "show all parts", commandZh: "显示所有零件", commandEn: "show all parts" },
-  { zh: "隔离选中", en: "isolate selected", commandZh: "隔离选中", commandEn: "isolate selected" },
+  { zh: "隐藏所有零件", en: "hide all parts", commandZh: "隐藏所有零件", commandEn: "hide all parts", formats: ["step"] },
+  { zh: "显示所有零件", en: "show all parts", commandZh: "显示所有零件", commandEn: "show all parts", formats: ["step"] },
+  { zh: "隔离选中", en: "isolate selected", commandZh: "隔离选中", commandEn: "isolate selected", formats: ["step"] },
   { zh: "文件信息", en: "file info", commandZh: "文件信息", commandEn: "file info" },
-  { zh: "设置参数 <名称> <值>", en: "set parameter <name> <value>", commandZh: "设置参数 ", commandEn: "set parameter " },
-  { zh: "重置参数", en: "reset parameters", commandZh: "重置参数", commandEn: "reset parameters" },
-  { zh: "重置姿态", en: "reset pose", commandZh: "重置姿态", commandEn: "reset pose" },
+  { zh: "设置参数 <名称> <值>", en: "set parameter <name> <value>", commandZh: "设置参数 ", commandEn: "set parameter ", formats: ["implicit"] },
+  { zh: "重置参数", en: "reset parameters", commandZh: "重置参数", commandEn: "reset parameters", formats: ["implicit"] },
+  { zh: "重置姿态", en: "reset pose", commandZh: "重置姿态", commandEn: "reset pose", formats: ["robot"] },
   { zh: "变颜色 <颜色>", en: "set color <color>", commandZh: "变颜色 ", commandEn: "set color " },
   { zh: "旋转 <角度>", en: "rotate <angle>", commandZh: "旋转 ", commandEn: "rotate " },
   { zh: "跳舞", en: "dance", commandZh: "跳舞", commandEn: "dance" },
@@ -127,8 +144,25 @@ export const AI_COMMAND_ROWS = Object.freeze([
   { zh: "浅色模式", en: "light mode", commandZh: "浅色模式", commandEn: "light mode" }
 ]);
 
-export function buildCommandRows({ catalog = [], parameters = [], lang = "en" } = {}) {
-  const base = AI_COMMAND_ROWS.map((row) => ({
+export function buildCommandRows({ catalog = [], parameters = [], lang = "en", sourceFormat = "" } = {}) {
+  const stepLike = isStepLike(sourceFormat);
+  const implicitLike = isImplicitLike(sourceFormat);
+  const robotLike = isRobotLike(sourceFormat);
+  const base = AI_COMMAND_ROWS.filter((row) => {
+    if (!row.formats) {
+      return true;
+    }
+    if (row.formats.includes("step") && stepLike) {
+      return true;
+    }
+    if (row.formats.includes("implicit") && implicitLike) {
+      return true;
+    }
+    if (row.formats.includes("robot") && robotLike) {
+      return true;
+    }
+    return false;
+  }).map((row) => ({
     key: `base-${row.zh}`,
     zh: row.zh,
     en: row.en,
@@ -145,16 +179,18 @@ export function buildCommandRows({ catalog = [], parameters = [], lang = "en" } 
       group: "file"
     };
   });
-  const paramRows = (Array.isArray(parameters) ? parameters : []).map((parameter) => {
-    const label = String(parameter.label || parameter.id || "");
-    return {
-      key: `param-${parameter.id || label}`,
-      zh: `设置参数 ${label} `,
-      en: `set parameter ${label} `,
-      command: lang === "zh" ? `设置参数 ${label} ` : `set parameter ${label} `,
-      group: "param"
-    };
-  });
+  const paramRows = implicitLike
+    ? (Array.isArray(parameters) ? parameters : []).map((parameter) => {
+        const label = String(parameter.label || parameter.id || "");
+        return {
+          key: `param-${parameter.id || label}`,
+          zh: `设置参数 ${label} `,
+          en: `set parameter ${label} `,
+          command: lang === "zh" ? `设置参数 ${label} ` : `set parameter ${label} `,
+          group: "param"
+        };
+      })
+    : [];
   return [...base, ...fileRows, ...paramRows];
 }
 

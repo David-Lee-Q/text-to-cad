@@ -388,7 +388,8 @@ export default function AIChatDrawer({
   const commandRows = buildCommandRows({
     catalog: context.catalog || [],
     parameters: context.parameters || [],
-    lang
+    lang,
+    sourceFormat: context.sourceFormat || ""
   });
   const commandQuery = showCommands ? input.trim().slice(1).toLowerCase() : "";
   const filteredRows = commandQuery

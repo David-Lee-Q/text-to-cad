@@ -12,6 +12,7 @@ import { createVercelBlobAssetBackend } from "./vercelBlobAssetBackend.mjs";
 import {
   createCadViewerApiMiddleware,
   createChatProxyMiddleware,
+  createHelpDocsMiddleware,
   createLocalAssetMiddleware,
   serveDistAsset,
 } from "./httpHandlers.mjs";
@@ -147,6 +148,7 @@ if (localAssetBackendEnabled) {
 
 const middlewares = [
   createChatProxyMiddleware(),
+  createHelpDocsMiddleware(),
   createCadViewerApiMiddleware({
     backend,
     enableStepArtifactBackend: stepArtifactBackendEnabled,

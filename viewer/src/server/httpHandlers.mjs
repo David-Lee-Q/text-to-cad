@@ -8,6 +8,8 @@ const STATIC_CONTENT_TYPES = new Map([
   [".js", "text/javascript; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
   [".map", "application/json; charset=utf-8"],
+  [".md", "text/markdown; charset=utf-8"],
+  [".png", "image/png"],
   [".svg", "image/svg+xml"],
   [".wasm", "application/wasm"],
 ]);
@@ -894,6 +896,40 @@ export function createChatProxyMiddleware({
       intent: String(parsed?.intent || "chat"),
       params: parsed?.params && typeof parsed.params === "object" ? parsed.params : {},
       reply: String(parsed?.reply || "").trim() || content,
+    });
+  };
+}
+
+export function createHelpDocsMiddleware({ docsRoot = "/workspace/docs" } = {}) {
+  return function helpDocsMiddleware(req, res, next) {
+    const requestUrl = new URL(req.url || "/", "http://localhost");
+    if (!requestUrl.pathname.startsWith("/docs/")) {
+      next();
+      return;
+    }
+    let filePath = "";
+    try {
+      filePath = path.resolve(
+        docsRoot,
+        decodeURIComponent(requestUrl.pathname).replace(/^\/docs\//u, "")
+      );
+    } catch {
+      res.statusCode = 400;
+      res.end("Bad request");
+      return;
+    }
+    if (!(filePath === docsRoot || filePath.startsWith(`${docsRoot}${path.sep}`))) {
+      res.statusCode = 403;
+      res.end("Forbidden");
+      return;
+    }
+    if (!fs.existsSync(filePath)) {
+      res.statusCode = 404;
+      res.end("Not found");
+      return;
+    }
+    serveStaticFile(filePath, req, res, next, {
+      contentType: contentTypeForStaticAsset(filePath) || undefined,
     });
   };
 }

@@ -95,22 +95,17 @@ function AiGuideBubble({ aiChatOpen }) {
   }
 
   return (
-    <div className="absolute right-0 top-full z-60 mt-2 w-72 animate-in fade-in zoom-in">
-      <div className="relative rounded-lg border border-primary/30 bg-popover p-3 text-xs shadow-lg">
-        <div className="absolute -top-1 right-4 size-3 rotate-45 border-l border-t border-primary/30 bg-popover" />
-        <div className="mb-1 flex items-center gap-1.5">
-          <AiRobotGlyph className="size-4 shrink-0" />
-          <span className="font-medium text-foreground">{t("aiTitle")}</span>
-          <button
-            type="button"
-            className="ml-auto rounded p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            onClick={() => setVisible(false)}
-            aria-label={t("aiClose")}
-          >
-            <X className="size-3.5" />
-          </button>
-        </div>
-        <p className="leading-relaxed text-muted-foreground">{t(GUIDE_MESSAGE_KEYS[messageIndex])}</p>
+    <div className="absolute right-full top-1/2 z-60 mr-2 -translate-y-1/2 animate-in fade-in zoom-in">
+      <div className="relative flex items-center gap-2 whitespace-nowrap rounded-md border border-primary/30 bg-popover px-2.5 py-1.5 text-xs shadow-lg">
+        <span className="leading-none text-muted-foreground">{t(GUIDE_MESSAGE_KEYS[messageIndex])}</span>
+        <button
+          type="button"
+          className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          onClick={() => setVisible(false)}
+          aria-label={t("aiClose")}
+        >
+          <X className="size-3" />
+        </button>
       </div>
     </div>
   );

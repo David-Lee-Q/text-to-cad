@@ -290,8 +290,9 @@ export default function AIChatDrawer({
       <SheetContent
         side="right"
         className="sm:max-w-md"
-        overlayClassName="bg-black/20"
+        overlayClassName="bg-black/20 !top-11"
         showCloseButton={false}
+        style={{ top: "44px", height: "auto" }}
       >
         <SheetTitle className="sr-only">{t("aiTitle")}</SheetTitle>
         <div className="flex h-full min-h-0 flex-col gap-3 py-4">

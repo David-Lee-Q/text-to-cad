@@ -166,6 +166,15 @@ function addHomeEntry(result, seenKeys, entry) {
   result.push(entry);
 }
 
+function shuffledEntries(entries) {
+  const result = [...(Array.isArray(entries) ? entries : [])];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 export function selectHomeEntries(entries) {
   const sortedEntries = [...(Array.isArray(entries) ? entries : [])].sort(compareEntryLabels);
   const result = [];
@@ -185,7 +194,7 @@ export function selectHomeEntries(entries) {
     addHomeEntry(result, seenKeys, match);
   }
 
-  for (const entry of sortedEntries) {
+  for (const entry of shuffledEntries(sortedEntries)) {
     if (result.length >= MAX_HOME_OPTIONS) {
       break;
     }
